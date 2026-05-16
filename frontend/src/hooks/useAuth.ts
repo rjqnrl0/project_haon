@@ -11,12 +11,19 @@ export function useAuth() {
   const showToast = useUIStore((s) => s.showToast)
   const navigate = useNavigate()
 
+  const mapUser = (raw: any) => ({
+    id: raw.id,
+    email: raw.email,
+    faceRegistered: raw.face_registered,
+  })
+
   const signUp = async (email: string, password: string) => {
     setIsLoading(true)
     try {
       const { data } = await api.post('/auth/signup', { email, password })
       localStorage.setItem('refreshToken', data.refresh_token)
-      setAuth(data.user, data.access_token)
+      const user = mapUser(data.user)
+      setAuth(user, data.access_token)
       navigate('/face-id/register')
     } catch (err: any) {
       showToast({ type: 'error', message: err.response?.data?.detail || '회원가입 실패' })
@@ -30,9 +37,10 @@ export function useAuth() {
     try {
       const { data } = await api.post('/auth/login', { email, password })
       localStorage.setItem('refreshToken', data.refresh_token)
-      setAuth(data.user, data.access_token)
+      const user = mapUser(data.user)
+      setAuth(user, data.access_token)
 
-      if (!data.user.face_registered) {
+      if (!user.faceRegistered) {
         navigate('/face-id/register')
       } else {
         navigate('/fitting')

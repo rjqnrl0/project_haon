@@ -3,6 +3,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.auth import router as auth_router
 from app.api.background import router as background_router
@@ -15,7 +16,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.middleware import RequestLoggingMiddleware
 from app.core.scheduler import periodic_cleanup
-from app.services.file_manager import FileManagerService
+from app.services.file_manager import FileManagerService, LOCAL_STORAGE_DIR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -41,6 +42,10 @@ app.include_router(fitting_router)
 app.include_router(background_router)
 app.include_router(recommend_router)
 app.include_router(share_router)
+
+if settings.env == "local":
+    LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/local-files", StaticFiles(directory=str(LOCAL_STORAGE_DIR)), name="local-files")
 
 
 @app.on_event("startup")

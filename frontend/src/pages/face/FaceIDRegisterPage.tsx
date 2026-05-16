@@ -36,7 +36,7 @@ export function FaceIDRegisterPage() {
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover scale-x-[-1]"
                 data-testid="face-register-video"
               />
             </div>
@@ -59,7 +59,7 @@ export function FaceIDRegisterPage() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setCapturedImage(null)}
+                onClick={() => { setCapturedImage(null); startCamera() }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                 data-testid="face-register-retake-button"
               >

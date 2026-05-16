@@ -9,5 +9,6 @@ class User(TimestampMixin, Base):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     cognito_sub: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     face_registered: Mapped[bool] = mapped_column(Boolean, default=False)
     face_s3_key: Mapped[str | None] = mapped_column(String(512), nullable=True)

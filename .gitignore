@@ -35,3 +35,6 @@ htmlcov/
 
 # Claude
 .claude/
+
+# Documentation (local only)
+*.md

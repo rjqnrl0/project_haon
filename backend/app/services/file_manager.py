@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError
@@ -12,12 +12,18 @@ logger = logging.getLogger("v-suitcase.file_manager")
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+LOCAL_STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / ".local-storage"
+
 
 class FileManagerService:
     def __init__(self):
         self.settings = get_settings()
-        self.s3 = boto3.client("s3", region_name=self.settings.s3_region)
-        self.bucket = self.settings.s3_temp_bucket
+        self.is_local = self.settings.env == "local"
+        if self.is_local:
+            LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        else:
+            self.s3 = boto3.client("s3", region_name=self.settings.s3_region)
+            self.bucket = self.settings.s3_temp_bucket
 
     def validate_file(self, content_type: str, size_bytes: int) -> None:
         from app.core.errors import FileTooLargeError, FileTypeInvalidError
@@ -36,17 +42,31 @@ class FileManagerService:
         s3_key = (
             f"{self.settings.env}/{user_id}/{task_id}/{category}_{uuid.uuid4().hex[:8]}.{ext}"
         )
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=s3_key,
-            Body=file_bytes,
-            ContentType=content_type,
-        )
-        logger.info("Uploaded %s (%d bytes)", s3_key, len(file_bytes))
+
+        if self.is_local:
+            file_path = LOCAL_STORAGE_DIR / s3_key
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_bytes(file_bytes)
+            logger.info("Local saved %s (%d bytes)", s3_key, len(file_bytes))
+        else:
+            self.s3.put_object(
+                Bucket=self.bucket,
+                Key=s3_key,
+                Body=file_bytes,
+                ContentType=content_type,
+            )
+            logger.info("Uploaded %s (%d bytes)", s3_key, len(file_bytes))
+
         return s3_key
 
     def get_download_url(self, s3_key: str, expires_in: int = 900) -> str:
         from app.core.errors import NotFoundError
+
+        if self.is_local:
+            file_path = LOCAL_STORAGE_DIR / s3_key
+            if not file_path.exists():
+                raise NotFoundError("파일을 찾을 수 없습니다")
+            return f"http://localhost:8000/local-files/{s3_key}"
 
         try:
             self.s3.head_object(Bucket=self.bucket, Key=s3_key)
@@ -60,6 +80,11 @@ class FileManagerService:
         )
 
     def delete_file(self, s3_key: str) -> None:
+        if self.is_local:
+            file_path = LOCAL_STORAGE_DIR / s3_key
+            file_path.unlink(missing_ok=True)
+            return
+
         try:
             self.s3.delete_object(Bucket=self.bucket, Key=s3_key)
         except ClientError as e:
@@ -67,6 +92,12 @@ class FileManagerService:
 
     def get_file_bytes(self, s3_key: str) -> bytes:
         from app.core.errors import NotFoundError
+
+        if self.is_local:
+            file_path = LOCAL_STORAGE_DIR / s3_key
+            if not file_path.exists():
+                raise NotFoundError("파일을 찾을 수 없습니다")
+            return file_path.read_bytes()
 
         try:
             response = self.s3.get_object(Bucket=self.bucket, Key=s3_key)

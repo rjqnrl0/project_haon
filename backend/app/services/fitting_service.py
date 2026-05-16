@@ -1,9 +1,12 @@
+import base64
 import hashlib
 import io
+import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import boto3
 from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,12 +19,12 @@ from app.services.file_manager import FileManagerService
 
 logger = logging.getLogger("v-suitcase.fitting")
 
-CATEGORY_POSITIONS = {
-    "top": {"y_start": 0.30, "y_end": 0.55, "width_ratio": 0.60},
-    "bottom": {"y_start": 0.50, "y_end": 0.80, "width_ratio": 0.55},
-    "dress": {"y_start": 0.30, "y_end": 0.80, "width_ratio": 0.60},
-    "outer": {"y_start": 0.30, "y_end": 0.55, "width_ratio": 0.65},
-    "accessory": {"y_start": 0.20, "y_end": 0.30, "width_ratio": 0.20},
+CATEGORY_SEARCH_TERMS = {
+    "top": "the shirt or top on the torso",
+    "bottom": "the pants or skirt on the legs",
+    "dress": "the clothing on the body from shoulders to knees",
+    "outer": "the jacket or coat on the upper body",
+    "accessory": "the accessory",
 }
 
 
@@ -29,6 +32,7 @@ class FittingService:
     def __init__(self):
         self.file_manager = FileManagerService()
         self.settings = get_settings()
+        self.bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
 
     async def upload_body_image(
         self, user: User, image_bytes: bytes, content_type: str, db: AsyncSession
@@ -86,11 +90,85 @@ class FittingService:
             category=f"clothing_{category}",
         )
 
+        task = FittingTask(
+            id=uuid.UUID(clothing_id),
+            user_id=user.id,
+            task_type=category,
+            status="uploaded",
+            body_file_path=s3_key,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=self.settings.file_expiry_hours),
+        )
+        db.add(task)
+        await db.flush()
+
         return {
             "clothing_id": clothing_id,
             "s3_key": s3_key,
             "category": category,
         }
+
+    def _describe_clothing(self, clothing_bytes: bytes) -> str:
+        img = Image.open(io.BytesIO(clothing_bytes)).convert("RGB")
+        img.thumbnail((512, 512), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        image_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 300,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": "image/png", "data": image_b64},
+                    },
+                    {
+                        "type": "text",
+                        "text": "Describe ONLY this clothing item in detail for an AI image generator. "
+                                "Include: type of garment, color, pattern, material texture, style, fit, and distinctive features. "
+                                "Be specific and concise in 1-2 sentences. "
+                                "Do NOT describe any person, body, face, or background. Only the garment itself.",
+                    },
+                ],
+            }],
+        })
+
+        response = self.bedrock.invoke_model(
+            modelId="us.anthropic.claude-opus-4-6-v1",
+            contentType="application/json",
+            accept="application/json",
+            body=body,
+        )
+
+        resp_body = json.loads(response["body"].read())
+        return resp_body["content"][0]["text"]
+
+    def _invoke_search_replace(self, image_bytes: bytes, search_prompt: str, replace_prompt: str) -> bytes:
+        img = Image.open(io.BytesIO(image_bytes))
+        img = img.convert("RGB")
+        img.thumbnail((1024, 1024), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        image_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        body = json.dumps({
+            "image": image_b64,
+            "search_prompt": search_prompt,
+            "prompt": replace_prompt,
+        })
+
+        response = self.bedrock.invoke_model(
+            modelId="us.stability.stable-image-search-replace-v1:0",
+            contentType="application/json",
+            accept="application/json",
+            body=body,
+        )
+
+        response_body = json.loads(response["body"].read())
+        result_b64 = response_body["images"][0]
+        return base64.b64decode(result_b64)
 
     async def execute_fitting(
         self, user: User, body_image_id: str, clothing_ids: list[str], db: AsyncSession
@@ -108,25 +186,43 @@ class FittingService:
         task.status = "processing"
         await db.flush()
 
-        # Phase 1 Mock: overlay clothing on body
         body_bytes = self.file_manager.get_file_bytes(task.body_file_path)
-        body_img = Image.open(io.BytesIO(body_bytes)).convert("RGBA")
 
+        current_image_bytes = body_bytes
         for clothing_id in clothing_ids:
-            # In real impl, lookup clothing S3 key from storage
-            # Phase 1: just use body image as-is (mock)
-            pass
+            clothing_result = await db.execute(
+                select(FittingTask).where(
+                    FittingTask.id == clothing_id,
+                    FittingTask.user_id == user.id,
+                )
+            )
+            clothing_task = clothing_result.scalar_one_or_none()
+            if not clothing_task or not clothing_task.body_file_path:
+                logger.warning("Clothing task %s not found, skipping", clothing_id)
+                continue
 
-        # Save result (Phase 1: return body as result)
-        result_buffer = io.BytesIO()
-        body_img.convert("RGB").save(result_buffer, format="JPEG", quality=85)
-        result_bytes = result_buffer.getvalue()
+            category = clothing_task.task_type or "top"
+            clothing_bytes = self.file_manager.get_file_bytes(clothing_task.body_file_path)
+
+            clothing_description = self._describe_clothing(clothing_bytes)
+            logger.info("Clothing description for %s: %s", clothing_id, clothing_description)
+
+            search_term = CATEGORY_SEARCH_TERMS.get(category, "the clothing on the person")
+            replace_prompt = f"{clothing_description}, same person same pose same background"
+
+            try:
+                current_image_bytes = self._invoke_search_replace(
+                    current_image_bytes, search_term, replace_prompt
+                )
+            except Exception as e:
+                logger.error("Bedrock fitting failed for clothing %s: %s", clothing_id, e)
+                raise ValidationError(f"AI 피팅 처리 실패: {str(e)}")
 
         result_s3_key = self.file_manager.upload_file(
             user_id=str(user.id),
             task_id=str(task.id),
-            file_bytes=result_bytes,
-            content_type="image/jpeg",
+            file_bytes=current_image_bytes,
+            content_type="image/png",
             category="result",
         )
 
