@@ -43,7 +43,7 @@ app.include_router(background_router)
 app.include_router(recommend_router)
 app.include_router(share_router)
 
-if settings.env == "local":
+if settings.env in ("local", "dev"):
     LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     app.mount("/local-files", StaticFiles(directory=str(LOCAL_STORAGE_DIR)), name="local-files")
 

@@ -18,7 +18,7 @@ LOCAL_STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / ".local-stor
 class FileManagerService:
     def __init__(self):
         self.settings = get_settings()
-        self.is_local = self.settings.env == "local"
+        self.is_local = self.settings.env in ("local", "dev")
         if self.is_local:
             LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         else:

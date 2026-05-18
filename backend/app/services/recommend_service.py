@@ -1,5 +1,9 @@
+import base64
+import json
 import logging
+import uuid
 
+import boto3
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +12,7 @@ from app.core.config import get_settings
 from app.core.errors import NotFoundError, ValidationError
 from app.models.fitting_task import FittingTask
 from app.models.user import User
+from app.services.file_manager import FileManagerService
 
 logger = logging.getLogger("v-suitcase.recommend")
 
@@ -26,17 +31,160 @@ MOCK_SIZE_RECOMMENDATION = {
     },
 }
 
-WEATHER_CODI_TEMPLATES = {
-    "hot": "가볍고 통기성 좋은 린넨 소재의 상의와 반바지를 추천드립니다. 자외선 차단을 위해 모자를 챙기세요.",
-    "warm": "얇은 면 소재의 셔츠와 면바지가 적합합니다. 아침저녁 온도차에 대비해 가벼운 가디건을 준비하세요.",
-    "cool": "니트나 스웨터에 자켓을 레이어링하세요. 스카프를 활용하면 스타일리시하면서 따뜻합니다.",
-    "cold": "두꺼운 코트와 기모 안감 바지를 추천합니다. 장갑, 목도리, 비니는 필수입니다.",
+FALLBACK_TEMPLATES = {
+    "hot": {
+        "codi_advice": "가볍고 통기성 좋은 린넨 소재의 상의와 반바지를 추천드립니다. 자외선 차단을 위해 모자를 챙기세요.",
+        "essential_items": ["선크림", "모자", "선글라스"],
+        "additional_tips": "자외선 지수가 높으니 피부 보호에 신경 쓰세요.",
+    },
+    "warm": {
+        "codi_advice": "얇은 면 소재의 셔츠와 면바지가 적합합니다. 아침저녁 온도차에 대비해 가벼운 가디건을 준비하세요.",
+        "essential_items": ["가디건", "우산"],
+        "additional_tips": "일교차가 있을 수 있으니 레이어링을 추천합니다.",
+    },
+    "cool": {
+        "codi_advice": "니트나 스웨터에 자켓을 레이어링하세요. 스카프를 활용하면 스타일리시하면서 따뜻합니다.",
+        "essential_items": ["자켓", "스카프"],
+        "additional_tips": "바람이 불 수 있으니 방풍 소재를 추천합니다.",
+    },
+    "cold": {
+        "codi_advice": "두꺼운 코트와 기모 안감 바지를 추천합니다. 장갑, 목도리, 비니는 필수입니다.",
+        "essential_items": ["코트", "장갑", "목도리", "비니"],
+        "additional_tips": "보온에 집중하되 실내 활동 시 벗기 쉬운 레이어링이 좋습니다.",
+    },
 }
 
 
 class RecommendService:
     def __init__(self):
         self.settings = get_settings()
+        session = boto3.Session(profile_name="claude-code")
+        self.bedrock = session.client("bedrock-runtime", region_name="us-east-1")
+        self.file_manager = FileManagerService()
+
+    def _generate_codi_with_claude(self, city: str, weather_data: dict) -> dict:
+        avg_temp = weather_data.get("avg_temp", 20)
+        condition = weather_data.get("condition", "Clear")
+        forecasts = weather_data.get("forecasts", [])
+
+        precipitation = 0
+        if forecasts:
+            precipitation = sum(f.get("precipitation", 0) for f in forecasts) / len(forecasts)
+
+        prompt = (
+            f"당신은 여행 패션 스타일리스트입니다.\n"
+            f"여행지: {city}\n"
+            f"날씨 정보: 평균기온 {avg_temp:.1f}°C, 날씨 상태 {condition}, 평균 강수확률 {precipitation:.0f}%\n\n"
+            f"위 날씨 정보와 여행지 특성을 바탕으로 여행에 적합한 코디를 추천해주세요.\n"
+            f"현지 문화와 관광지 특성도 고려해주세요.\n\n"
+            f"반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n"
+            f'{{\n'
+            f'  "codi_advice": "3-4문장의 구체적인 코디 추천",\n'
+            f'  "essential_items": ["필수 아이템1", "필수 아이템2", "필수 아이템3", "필수 아이템4"],\n'
+            f'  "additional_tips": "여행지 특성을 반영한 실용적 팁 1문장"\n'
+            f'}}'
+        )
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        })
+
+        response = self.bedrock.invoke_model(
+            modelId="us.anthropic.claude-sonnet-4-6",
+            contentType="application/json",
+            accept="application/json",
+            body=body,
+        )
+
+        resp_body = json.loads(response["body"].read())
+        text = resp_body["content"][0]["text"].strip()
+
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0].strip()
+
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start >= 0 and end > start:
+            text = text[start:end]
+
+        return json.loads(text)
+
+    def _translate_codi_to_english(self, city: str, codi_advice: str) -> str:
+        prompt = (
+            f"Translate the following Korean fashion recommendation into a concise English image prompt "
+            f"(1-2 sentences max, describe ONLY the clothing items and style):\n\n{codi_advice}"
+        )
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 200,
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        })
+        response = self.bedrock.invoke_model(
+            modelId="us.anthropic.claude-sonnet-4-6",
+            contentType="application/json",
+            accept="application/json",
+            body=body,
+        )
+        resp_body = json.loads(response["body"].read())
+        return resp_body["content"][0]["text"].strip()
+
+    def _generate_codi_image(self, city: str, codi_advice: str, user_id: str) -> str | None:
+        from PIL import Image
+        import io
+
+        outfit_en = self._translate_codi_to_english(city, codi_advice)
+
+        img = Image.new("RGB", (512, 768), (200, 200, 200))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        image_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        prompt = (
+            f"A stylish person wearing {outfit_en}, "
+            f"standing in front of a famous landmark in {city}, "
+            f"full body fashion photo, natural lighting, travel photography, high quality"
+        )
+
+        body = json.dumps({
+            "image": image_b64,
+            "search_prompt": "the gray background",
+            "prompt": prompt,
+        })
+
+        response = self.bedrock.invoke_model(
+            modelId="us.stability.stable-image-search-replace-v1:0",
+            contentType="application/json",
+            accept="application/json",
+            body=body,
+        )
+
+        resp_body = json.loads(response["body"].read())
+        if "images" not in resp_body or not resp_body["images"]:
+            logger.warning("Stability response missing images: %s", list(resp_body.keys()))
+            return None
+        image_bytes = base64.b64decode(resp_body["images"][0])
+
+        s3_key = self.file_manager.upload_file(
+            user_id=user_id,
+            task_id=f"codi-{uuid.uuid4().hex[:8]}",
+            file_bytes=image_bytes,
+            content_type="image/png",
+            category="codi_recommend",
+        )
+
+        return self.file_manager.get_download_url(s3_key)
+
+    def _get_fallback(self, avg_temp: float) -> dict:
+        if avg_temp >= 30:
+            return FALLBACK_TEMPLATES["hot"]
+        elif avg_temp >= 20:
+            return FALLBACK_TEMPLATES["warm"]
+        elif avg_temp >= 10:
+            return FALLBACK_TEMPLATES["cool"]
+        return FALLBACK_TEMPLATES["cold"]
 
     async def get_size_recommendation(self, user: User, task_id: str, db: AsyncSession) -> dict:
         result = await db.execute(
@@ -46,7 +194,6 @@ class RecommendService:
         if not task:
             raise NotFoundError("피팅 결과를 찾을 수 없습니다")
 
-        # Phase 1: hardcoded mock
         return {
             "task_id": str(task.id),
             "recommendations": MOCK_SIZE_RECOMMENDATION,
@@ -57,32 +204,29 @@ class RecommendService:
             raise ValidationError("도시명을 입력해주세요")
 
         weather_data = await self._fetch_weather(city)
-
         avg_temp = weather_data["avg_temp"] if weather_data else 20
-        if avg_temp >= 30:
-            template_key = "hot"
-        elif avg_temp >= 20:
-            template_key = "warm"
-        elif avg_temp >= 10:
-            template_key = "cool"
-        else:
-            template_key = "cold"
 
-        codi_advice = WEATHER_CODI_TEMPLATES[template_key]
+        try:
+            recommendation = self._generate_codi_with_claude(city, weather_data or {"avg_temp": avg_temp})
+        except Exception as e:
+            logger.warning("Bedrock codi generation failed, using fallback: %s", e)
+            recommendation = self._get_fallback(avg_temp)
 
-        essential_items = {
-            "hot": ["선크림", "모자", "선글라스"],
-            "warm": ["가디건", "우산"],
-            "cool": ["자켓", "스카프"],
-            "cold": ["코트", "장갑", "목도리", "비니"],
-        }[template_key]
+        image_url = None
+        try:
+            image_url = self._generate_codi_image(
+                city, recommendation["codi_advice"], str(user.id)
+            )
+        except Exception as e:
+            logger.warning("Codi image generation failed: %s", e)
 
         return {
             "city": city,
             "weather": weather_data,
-            "codi_advice": codi_advice,
-            "essential_items": essential_items,
-            "additional_tips": f"{city}에서의 여행을 즐기세요!",
+            "codi_advice": recommendation["codi_advice"],
+            "essential_items": recommendation["essential_items"],
+            "additional_tips": recommendation["additional_tips"],
+            "image_url": image_url,
         }
 
     async def _fetch_weather(self, city: str) -> dict | None:

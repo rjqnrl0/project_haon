@@ -28,6 +28,9 @@ Thumbs.db
 pgdata/
 localstack_data/
 
+# Local file storage
+backend/.local-storage/
+
 # pytest
 .pytest_cache/
 .coverage

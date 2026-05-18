@@ -105,6 +105,15 @@ export function RecommendPage() {
           {weatherResult && (
             <div className="bg-white rounded-lg border p-4 space-y-3">
               <h3 className="font-bold text-lg">{weatherResult.city} 날씨 코디</h3>
+              {weatherResult.image_url && (
+                <div className="flex justify-center">
+                  <img
+                    src={weatherResult.image_url}
+                    alt={`${weatherResult.city} 코디 추천`}
+                    className="rounded-lg max-h-96 object-cover"
+                  />
+                </div>
+              )}
               <p className="text-gray-700">{weatherResult.codi_advice}</p>
               <div>
                 <h4 className="font-medium text-sm text-gray-500">필수 아이템</h4>

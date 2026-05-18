@@ -1,4 +1,6 @@
+import base64
 import hashlib
+import hmac
 import logging
 import uuid
 
@@ -34,6 +36,16 @@ class AuthService:
             self.client = boto3.client("cognito-idp", region_name=settings.cognito_region)
             self.pool_id = settings.cognito_pool_id
             self.client_id = settings.cognito_client_id
+            self.client_secret = settings.cognito_client_secret
+
+    def _get_secret_hash(self, username: str) -> str:
+        msg = username + self.client_id
+        digest = hmac.new(
+            self.client_secret.encode("utf-8"),
+            msg.encode("utf-8"),
+            hashlib.sha256,
+        ).digest()
+        return base64.b64encode(digest).decode("utf-8")
 
     async def sign_up(self, email: str, password: str, db: AsyncSession) -> User:
         existing = await db.execute(select(User).where(User.email == email))
@@ -46,6 +58,7 @@ class AuthService:
             try:
                 response = self.client.sign_up(
                     ClientId=self.client_id,
+                    SecretHash=self._get_secret_hash(email),
                     Username=email,
                     Password=password,
                     UserAttributes=[{"Name": "email", "Value": email}],
@@ -96,7 +109,11 @@ class AuthService:
             response = self.client.initiate_auth(
                 ClientId=self.client_id,
                 AuthFlow="USER_PASSWORD_AUTH",
-                AuthParameters={"USERNAME": email, "PASSWORD": password},
+                AuthParameters={
+                    "USERNAME": email,
+                    "PASSWORD": password,
+                    "SECRET_HASH": self._get_secret_hash(email),
+                },
             )
         except ClientError as e:
             code = e.response["Error"]["Code"]
