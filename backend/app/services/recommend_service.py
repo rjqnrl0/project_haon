@@ -229,6 +229,125 @@ class RecommendService:
             "image_url": image_url,
         }
 
+    async def get_dutyfree_codi(self, user: User, destination: str, arrival: str) -> dict:
+        from app.data.dutyfree_products import DUTY_FREE_PRODUCTS, get_products_by_ids
+
+        weather_data = await self._fetch_weather(destination)
+        avg_temp = weather_data["avg_temp"] if weather_data else 20
+
+        product_list = "\n".join(
+            f"- ID: {p['id']}, 브랜드: {p['brand']}, 이름: {p['name']}, 카테고리: {p['category']}, 설명: {p['description']}"
+            for p in DUTY_FREE_PRODUCTS
+        )
+
+        prompt = (
+            f"당신은 여행 패션 스타일리스트입니다.\n"
+            f"여행지: {destination}\n"
+            f"도착일시: {arrival}\n"
+            f"날씨 정보: 평균기온 {avg_temp:.1f}°C, 날씨 상태 {weather_data.get('condition', 'Clear') if weather_data else 'Clear'}\n\n"
+            f"아래 면세점 의류 목록에서 여행지 날씨와 특성에 맞는 코디를 추천해주세요.\n"
+            f"상의 1개 + 하의 1개 (또는 원피스 1개) + 아우터 1개 조합으로 추천해주세요.\n\n"
+            f"면세점 의류 목록:\n{product_list}\n\n"
+            f"반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n"
+            f'{{\n'
+            f'  "recommended_ids": ["선택한 상품ID1", "선택한 상품ID2", "선택한 상품ID3"],\n'
+            f'  "codi_advice": "3-4문장의 구체적인 코디 추천 및 이유"\n'
+            f'}}'
+        )
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        })
+
+        try:
+            response = self.bedrock.invoke_model(
+                modelId="us.anthropic.claude-sonnet-4-6",
+                contentType="application/json",
+                accept="application/json",
+                body=body,
+            )
+            resp_body = json.loads(response["body"].read())
+            text = resp_body["content"][0]["text"].strip()
+
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+                text = text.rsplit("```", 1)[0].strip()
+
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            if start >= 0 and end > start:
+                text = text[start:end]
+
+            result = json.loads(text)
+            recommended_items = get_products_by_ids(result["recommended_ids"])
+            codi_advice = result["codi_advice"]
+        except Exception as e:
+            logger.warning("Dutyfree codi generation failed, using fallback: %s", e)
+            recommended_items = [DUTY_FREE_PRODUCTS[4], DUTY_FREE_PRODUCTS[8], DUTY_FREE_PRODUCTS[0]]
+            codi_advice = self._get_fallback(avg_temp)["codi_advice"]
+
+        return {
+            "recommended_items": recommended_items,
+            "codi_advice": codi_advice,
+            "weather_info": {
+                "avg_temp": avg_temp,
+                "condition": weather_data.get("condition", "Clear") if weather_data else "Clear",
+            },
+        }
+
+    async def get_attractions(self, destination: str) -> dict:
+        prompt = (
+            f"여행지 '{destination}'의 대표 관광지 5곳을 추천해주세요.\n"
+            f"가상 피팅 배경으로 사용할 곳이므로 사진 배경으로 좋은 랜드마크 위주로 추천해주세요.\n\n"
+            f"반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n"
+            f'{{\n'
+            f'  "attractions": [\n'
+            f'    {{"name": "영문명", "name_ko": "한글명", "description": "한줄 설명", "image_keyword": "Unsplash 검색용 영문 키워드"}},\n'
+            f'    ...\n'
+            f'  ]\n'
+            f'}}'
+        )
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        })
+
+        try:
+            response = self.bedrock.invoke_model(
+                modelId="us.anthropic.claude-sonnet-4-6",
+                contentType="application/json",
+                accept="application/json",
+                body=body,
+            )
+            resp_body = json.loads(response["body"].read())
+            text = resp_body["content"][0]["text"].strip()
+
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+                text = text.rsplit("```", 1)[0].strip()
+
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            if start >= 0 and end > start:
+                text = text[start:end]
+
+            return json.loads(text)
+        except Exception as e:
+            logger.warning("Attractions generation failed, using fallback: %s", e)
+            return {
+                "attractions": [
+                    {"name": "Eiffel Tower", "name_ko": "에펠탑", "description": "파리의 상징적 랜드마크", "image_keyword": "eiffel tower paris"},
+                    {"name": "Louvre Museum", "name_ko": "루브르 박물관", "description": "세계 최대 미술관", "image_keyword": "louvre museum paris"},
+                    {"name": "Champs-Élysées", "name_ko": "샹젤리제 거리", "description": "파리의 대표 거리", "image_keyword": "champs elysees paris"},
+                    {"name": "Montmartre", "name_ko": "몽마르뜨 언덕", "description": "예술가의 언덕", "image_keyword": "montmartre paris"},
+                    {"name": "Seine River", "name_ko": "센강", "description": "파리를 가로지르는 강", "image_keyword": "seine river paris"},
+                ]
+            }
+
     async def _fetch_weather(self, city: str) -> dict | None:
         api_key = self.settings.openweathermap_api_key
         if not api_key:

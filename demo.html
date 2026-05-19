@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>H-Suitcase Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background: white;
+      color: #06145f;
+    }
+
+    .hero-bg {
+      background: linear-gradient(90deg, #dff3ff 0%, #c9ecff 50%, #eef7ff 100%);
+    }
+
+    .floating-card {
+      backdrop-filter: blur(10px);
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      transition: 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex h-24 max-w-[1440px] items-center justify-between px-9">
+      <div class="flex items-center gap-14">
+        <div class="flex items-center gap-3">
+          <div class="flex h-11 w-11 items-center justify-center rounded-full bg-[#06145f] text-white text-xl font-bold">
+            ✈
+          </div>
+          <div class="text-3xl font-bold tracking-wide">HAON AIR</div>
+        </div>
+
+        <nav class="hidden lg:flex items-center gap-14 text-xl font-semibold">
+          <span>예약</span>
+          <span>여행 준비</span>
+        </nav>
+      </div>
+
+      <div class="flex items-center gap-5">
+        <button class="rounded-2xl border-2 border-[#06145f] px-7 py-3 text-base font-bold">
+          마이페이지
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[1440px] px-9 pb-20 pt-16">
+
+    <!-- H-Suitcase Banner -->
+    <section class="hero-bg relative overflow-hidden rounded-3xl p-10 shadow-sm">
+      <div class="max-w-3xl">
+        <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-[#0072ce]">
+          ✨ H-Suitcase AI 가상 피팅
+        </div>
+
+        <h1 class="text-4xl font-extrabold leading-snug">
+          파리 여행 준비,<br>
+          AI로 미리 입어보세요!
+        </h1>
+
+        <p class="mt-5 text-lg font-medium text-slate-700 leading-relaxed">
+          도착지와 도착일시를 기준으로 면세점 의류 코디를 추천하고,<br>
+          관광지 배경에서 바로 가상 피팅해볼 수 있어요.
+        </p>
+
+        <button onclick="goToHSuitcase()"
+          class="cta-btn mt-7 inline-flex items-center gap-2 rounded-full bg-[#06145f] px-7 py-4 text-base font-bold text-white shadow-lg">
+          H-Suitcase 시작하기 →
+        </button>
+      </div>
+
+      <div class="absolute right-12 top-1/2 hidden -translate-y-1/2 lg:flex gap-5">
+        <div class="floating-card rounded-3xl bg-white/85 p-5 shadow-md">
+          <div class="text-sm font-bold text-slate-500">도착지</div>
+          <div class="mt-2 text-2xl font-extrabold">Paris</div>
+        </div>
+
+        <div class="floating-card rounded-3xl bg-white/85 p-5 shadow-md">
+          <div class="text-sm font-bold text-slate-500">AI 코디 추천</div>
+          <div class="mt-2 text-2xl font-extrabold">가상 피팅 가능</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Reservation Complete -->
+    <section class="flex flex-col items-center py-24 text-center">
+      <div class="flex h-20 w-20 items-center justify-center rounded-full border-4 border-green-600 text-4xl text-green-600">
+        ✓
+      </div>
+
+      <h2 class="mt-8 text-4xl font-extrabold">결제 완료</h2>
+
+      <p class="mt-5 text-xl font-bold leading-relaxed">
+        예약번호 HAON26의 예매가 성공적으로 완료되었습니다.<br>
+        e-티켓 확인증이 발송되었습니다.
+      </p>
+    </section>
+
+    <!-- Payment Info -->
+    <section class="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between bg-slate-50 px-10 py-8">
+        <span class="text-xl font-extrabold">총 결제 금액</span>
+        <span class="text-3xl font-extrabold">1,485,000 원</span>
+      </div>
+
+      <div class="grid gap-8 border-t border-slate-200 px-10 py-10 lg:grid-cols-2">
+
+        <div class="space-y-5 text-base font-semibold">
+          <div class="flex justify-between">
+            <span>승인번호</span>
+            <span>34095758</span>
+          </div>
+
+          <div class="flex justify-between">
+            <span>결제 수단</span>
+            <span>삼성마스터 (********5951)</span>
+          </div>
+
+          <div class="flex justify-between">
+            <span>할부개월</span>
+            <span>일시불</span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-[#f7fbff] p-7">
+          <div class="mb-5 text-lg font-extrabold">여정 정보</div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-2xl bg-white p-5 shadow-sm">
+              <div class="text-sm font-bold text-slate-500">항공편</div>
+              <div class="mt-2 text-lg font-extrabold">ICN → CDG</div>
+            </div>
+
+            <div class="rounded-2xl bg-white p-5 shadow-sm">
+              <div class="text-sm font-bold text-slate-500">도착일시</div>
+              <div class="mt-2 text-lg font-extrabold">2026.11.24 18:35</div>
+            </div>
+
+            <div class="rounded-2xl bg-white p-5 shadow-sm">
+              <div class="text-sm font-bold text-slate-500">도착지</div>
+              <div class="mt-2 text-lg font-extrabold">프랑스 파리</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <div class="mt-12 flex justify-center gap-5">
+      <button class="rounded-full border-2 border-[#06145f] px-16 py-4 text-lg font-extrabold">
+        체크인
+      </button>
+
+      <button class="rounded-full bg-[#55c2ee] px-16 py-4 text-lg font-extrabold text-[#06145f]">
+        예매내역조회
+      </button>
+    </div>
+
+    <!-- Travel Prep -->
+    <section class="mt-28">
+      <h3 class="mb-8 text-2xl font-extrabold">여행 준비</h3>
+
+      <div class="grid gap-8 lg:grid-cols-[1fr_360px]">
+
+        <div class="grid gap-6 rounded-2xl border border-slate-200 p-8 md:grid-cols-3">
+
+          <div class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-5 text-5xl">🚗</div>
+            <div class="text-lg font-extrabold">렌터카</div>
+            <div class="mt-2 text-sm font-semibold text-slate-600">
+              회원 전용 렌터카 예약
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-5 text-5xl">🏨</div>
+            <div class="text-lg font-extrabold">호텔</div>
+            <div class="mt-2 text-sm font-semibold text-slate-600">
+              파리/샤를 드 골 호텔 특가 추천
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-5 text-5xl">👗</div>
+            <div class="text-lg font-extrabold">면세 쇼핑</div>
+            <div class="mt-2 text-sm font-semibold text-slate-600">
+              여행 전 필요한 의류와 잡화 준비
+            </div>
+          </div>
+        </div>
+
+        <!-- H-Suitcase CTA -->
+        <div class="rounded-2xl border border-[#bde7ff] bg-gradient-to-br from-white to-[#eaf8ff] p-7 shadow-sm">
+          <div class="mb-3 inline-flex rounded-full bg-[#06145f] px-3 py-1 text-xs font-bold text-white">
+            NEW
+          </div>
+
+          <h4 class="text-3xl font-extrabold leading-snug">
+            H-Suitcase로<br>
+            파리룩 미리보기
+          </h4>
+
+          <p class="mt-4 text-sm font-medium text-slate-700 leading-relaxed">
+            예약 정보의 도착지·도착일시가 자동 연동됩니다.
+          </p>
+
+          <button onclick="goToHSuitcase()"
+            class="cta-btn mt-7 w-full rounded-full bg-[#06145f] px-5 py-4 font-extrabold text-white shadow-md">
+            AI 가상 피팅 시작
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function goToHSuitcase() {
+      //alert('H-Suitcase 페이지로 이동합니다. 전달 데이터: - 도착지: 파리 - 도착일시: 2026.11.24 18:35');
+
+      // 실제 구현 예시
+      window.location.href = 'http://localhost:5173/fitting?destination=paris&arrival=2026-11-24T18:35';
+    }
+  </script>
+</body>
+</html>

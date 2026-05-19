@@ -42,7 +42,8 @@ function App() {
         </Route>
 
         {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/fitting" replace />} />
+        <Route path="*" element={<Navigate to="/fitting" replace />} />
       </Routes>
     </>
   )

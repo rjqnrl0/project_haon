@@ -1,12 +1,5 @@
-import { Navigate, Outlet } from 'react-router-dom'
-import { useAuthStore } from '../../stores/authStore'
+import { Outlet } from 'react-router-dom'
 
 export function AuthGuard() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
   return <Outlet />
 }

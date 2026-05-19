@@ -35,40 +35,44 @@ async def _get_jwks() -> dict:
 async def get_current_user(
     request: Request, db: AsyncSession = Depends(get_db)
 ) -> User:
+    settings = get_settings()
+
+    # Local dev: bypass auth entirely, return or create a dummy user
+    if settings.env == "local":
+        result = await db.execute(select(User).where(User.email == "local@dev.test"))
+        user = result.scalar_one_or_none()
+        if not user:
+            user = User(email="local@dev.test", cognito_sub="local-dev-user", face_registered=True)
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        return user
+
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise AuthError()
 
     token = auth_header.split(" ", 1)[1]
 
-    settings = get_settings()
-
-    # Local dev: skip Cognito verification
-    if settings.env == "local":
-        try:
-            payload = jwt.get_unverified_claims(token)
-        except JWTError:
+    try:
+        jwks = await _get_jwks()
+        header = jwt.get_unverified_header(token)
+        key = next(
+            (k for k in jwks.get("keys", []) if k["kid"] == header.get("kid")),
+            None,
+        )
+        if not key:
             raise AuthError(detail="유효하지 않은 토큰입니다", code="AUTH_INVALID")
-    else:
-        try:
-            jwks = await _get_jwks()
-            header = jwt.get_unverified_header(token)
-            key = next(
-                (k for k in jwks.get("keys", []) if k["kid"] == header.get("kid")),
-                None,
-            )
-            if not key:
-                raise AuthError(detail="유효하지 않은 토큰입니다", code="AUTH_INVALID")
 
-            payload = jwt.decode(
-                token,
-                key,
-                algorithms=["RS256"],
-                audience=settings.cognito_client_id,
-                issuer=f"https://cognito-idp.{settings.cognito_region}.amazonaws.com/{settings.cognito_pool_id}",
-            )
-        except JWTError:
-            raise AuthError(detail="유효하지 않은 토큰입니다", code="AUTH_INVALID")
+        payload = jwt.decode(
+            token,
+            key,
+            algorithms=["RS256"],
+            audience=settings.cognito_client_id,
+            issuer=f"https://cognito-idp.{settings.cognito_region}.amazonaws.com/{settings.cognito_pool_id}",
+        )
+    except JWTError:
+        raise AuthError(detail="유효하지 않은 토큰입니다", code="AUTH_INVALID")
 
     cognito_sub = payload.get("sub")
     if not cognito_sub:

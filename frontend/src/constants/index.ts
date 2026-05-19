@@ -1,3 +1,5 @@
+export { DUTY_FREE_PRODUCTS } from './dutyfree'
+
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
