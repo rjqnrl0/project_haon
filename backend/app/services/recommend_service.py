@@ -58,7 +58,7 @@ FALLBACK_TEMPLATES = {
 class RecommendService:
     def __init__(self):
         self.settings = get_settings()
-        session = boto3.Session(profile_name="claude-code")
+        session = boto3.Session()
         self.bedrock = session.client("bedrock-runtime", region_name="us-east-1")
         self.file_manager = FileManagerService()
 

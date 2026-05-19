@@ -1,19 +1,33 @@
-from pydantic_settings import BaseSettings
+import json
+import logging
+
+import boto3
+from botocore.exceptions import ClientError
 from functools import lru_cache
+from pydantic_settings import BaseSettings
+
+logger = logging.getLogger("v-suitcase.config")
+
+
+def _load_secrets(secret_name: str, region: str) -> dict:
+    try:
+        client = boto3.client("secretsmanager", region_name=region)
+        response = client.get_secret_value(SecretId=secret_name)
+        return json.loads(response["SecretString"])
+    except ClientError as e:
+        logger.error("Failed to load secrets from Secrets Manager: %s", e)
+        raise
 
 
 class Settings(BaseSettings):
     env: str = "local"
 
+    # 비민감 config — .env 파일에서 로드
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "vsuitcase"
     db_username: str = "postgres"
-    db_password: str = "postgres"
 
-    cognito_pool_id: str = ""
-    cognito_client_id: str = ""
-    cognito_client_secret: str = ""
     cognito_region: str = "ap-northeast-2"
 
     s3_temp_bucket: str = "v-suitcase-temp-local"
@@ -24,8 +38,23 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # 민감 정보 — local은 .env에서, prod/dev는 Secrets Manager에서 주입
+    db_password: str = "postgres"
+    cognito_pool_id: str = ""
+    cognito_client_id: str = ""
+    cognito_client_secret: str = ""
     openweathermap_api_key: str = ""
     unsplash_access_key: str = ""
+
+    def model_post_init(self, __context) -> None:
+        if self.env in ("prod", "dev"):
+            secrets = _load_secrets("v-suitcase/prod", "us-east-1")
+            self.db_password = secrets.get("db_password", self.db_password)
+            self.cognito_pool_id = secrets.get("cognito_pool_id", self.cognito_pool_id)
+            self.cognito_client_id = secrets.get("cognito_client_id", self.cognito_client_id)
+            self.cognito_client_secret = secrets.get("cognito_client_secret", self.cognito_client_secret)
+            self.openweathermap_api_key = secrets.get("openweathermap_api_key", self.openweathermap_api_key)
+            self.unsplash_access_key = secrets.get("unsplash_access_key", self.unsplash_access_key)
 
     @property
     def database_url(self) -> str:

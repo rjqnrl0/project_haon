@@ -34,7 +34,7 @@ class FittingService:
     def __init__(self):
         self.file_manager = FileManagerService()
         self.settings = get_settings()
-        session = boto3.Session(profile_name="claude-code")
+        session = boto3.Session()
         self.bedrock = session.client("bedrock-runtime", region_name="us-east-1")
 
     async def upload_body_image(
