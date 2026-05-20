@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import uuid
+from typing import Optional
 
 import boto3
 import httpx
@@ -131,7 +132,7 @@ class RecommendService:
         resp_body = json.loads(response["body"].read())
         return resp_body["content"][0]["text"].strip()
 
-    def _generate_codi_image(self, city: str, codi_advice: str, user_id: str) -> str | None:
+    def _generate_codi_image(self, city: str, codi_advice: str, user_id: str) -> Optional[str]:
         from PIL import Image
         import io
 
@@ -348,7 +349,7 @@ class RecommendService:
                 ]
             }
 
-    async def _fetch_weather(self, city: str) -> dict | None:
+    async def _fetch_weather(self, city: str) -> Optional[dict]:
         api_key = self.settings.openweathermap_api_key
         if not api_key:
             return {"avg_temp": 22, "condition": "Clear", "forecasts": [], "source": "mock"}

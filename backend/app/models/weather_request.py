@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -14,5 +15,5 @@ class WeatherRequest(TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     city: Mapped[str] = mapped_column(String(100), nullable=False)
-    weather_data: Mapped[str | None] = mapped_column(Text, nullable=True)
-    codi_advice: Mapped[str | None] = mapped_column(Text, nullable=True)
+    weather_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    codi_advice: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

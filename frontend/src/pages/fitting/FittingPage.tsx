@@ -5,11 +5,12 @@ import { ImagePreview } from '../../components/common/ImagePreview'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
 import { useUIStore } from '../../stores/uiStore'
 import { DUTY_FREE_PRODUCTS } from '../../constants'
+import { DESTINATIONS } from '../../constants/destinations'
 import type { DutyFreeProduct, Attraction } from '../../types'
 import api from '../../lib/api'
 
 type Mode = 'select' | 'ai-recommend'
-type Step = 'mode' | 'clothing' | 'attraction' | 'photo' | 'result'
+type Step = 'destination' | 'mode' | 'clothing' | 'attraction' | 'photo' | 'result'
 
 interface FittingResult {
   task_id: string
@@ -19,10 +20,10 @@ interface FittingResult {
 
 export function FittingPage() {
   const [searchParams] = useSearchParams()
-  const destination = searchParams.get('destination') || 'paris'
   const arrival = searchParams.get('arrival') || ''
 
-  const [step, setStep] = useState<Step>('mode')
+  const [step, setStep] = useState<Step>('destination')
+  const [destination, setDestination] = useState('')
   const [mode, setMode] = useState<Mode | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<DutyFreeProduct[]>([])
   const [aiRecommendation, setAiRecommendation] = useState<{ items: DutyFreeProduct[]; advice: string } | null>(null)
@@ -83,7 +84,8 @@ export function FittingPage() {
     }
   }, [])
 
-  const destinationLabel = destination.charAt(0).toUpperCase() + destination.slice(1)
+  const selectedDest = DESTINATIONS.find((d) => d.id === destination)
+  const destinationLabel = selectedDest?.nameKo || destination
 
   const handleModeSelect = async (selectedMode: Mode) => {
     setMode(selectedMode)
@@ -275,7 +277,11 @@ export function FittingPage() {
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
         <h2 className="text-xl font-bold text-gray-800">H-Suitcase 가상 피팅</h2>
         <p className="text-sm text-gray-600 mt-1">
-          여행지: <span className="font-semibold text-blue-700">{destinationLabel}</span>
+          {destination ? (
+            <>여행지: <span className="font-semibold text-blue-700">{destinationLabel}</span></>
+          ) : (
+            <>여행지를 선택해주세요</>
+          )}
           {arrival && (
             <> | 도착: <span className="font-semibold text-blue-700">{new Date(arrival).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></>
           )}
@@ -284,8 +290,8 @@ export function FittingPage() {
 
       {/* Progress */}
       <div className="flex items-center gap-1 text-xs">
-        {['모드 선택', '의류 선택', '관광지', '전신 사진', '결과'].map((label, i) => {
-          const steps: Step[] = ['mode', 'clothing', 'attraction', 'photo', 'result']
+        {['여행지', '모드 선택', '의류 선택', '관광지', '전신 사진', '결과'].map((label, i) => {
+          const steps: Step[] = ['destination', 'mode', 'clothing', 'attraction', 'photo', 'result']
           const isActive = steps.indexOf(step) >= i
           return (
             <div key={label} className="flex items-center gap-1">
@@ -293,11 +299,42 @@ export function FittingPage() {
                 {i + 1}
               </div>
               <span className={`hidden sm:inline ${isActive ? 'text-blue-700 font-medium' : 'text-gray-400'}`}>{label}</span>
-              {i < 4 && <div className={`w-4 h-0.5 ${isActive ? 'bg-blue-600' : 'bg-gray-200'}`} />}
+              {i < 5 && <div className={`w-4 h-0.5 ${isActive ? 'bg-blue-600' : 'bg-gray-200'}`} />}
             </div>
           )
         })}
       </div>
+
+      {/* Step: Destination Selection */}
+      {step === 'destination' && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">어디로 여행하시나요?</h3>
+          <p className="text-sm text-gray-500">여행지에 맞는 코디와 배경을 추천해드려요</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {DESTINATIONS.map((dest) => (
+              <button
+                key={dest.id}
+                onClick={() => {
+                  setDestination(dest.id)
+                  setStep('mode')
+                }}
+                className="relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+              >
+                <img
+                  src={dest.imageUrl}
+                  alt={dest.nameKo}
+                  className="w-full h-32 object-cover group-hover:scale-105 transition-transform"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-3 text-white text-left">
+                  <p className="text-lg font-bold">{dest.emoji} {dest.nameKo}</p>
+                  <p className="text-xs opacity-80">{dest.nameEn}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Step: Mode Selection */}
       {step === 'mode' && (
@@ -534,7 +571,13 @@ export function FittingPage() {
             <h4 className="font-medium text-gray-700">착용 의류 정보</h4>
             <div className="grid gap-3">
               {(fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts).map((item) => (
-                <div key={item.id} className="flex gap-3 p-3 bg-white border rounded-xl">
+                <a
+                  key={item.id}
+                  href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent(item.brand + ' ' + item.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex gap-3 p-3 bg-white border rounded-xl hover:border-red-300 hover:shadow-md transition-all"
+                >
                   <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">{item.brand}</p>
@@ -545,14 +588,14 @@ export function FittingPage() {
                       <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">15% OFF</span>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
 
           {/* CTA Button */}
           <a
-            href="https://kor.lottedfs.com"
+            href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent((fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.brand + ' ' + (fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.name)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold text-center text-lg hover:from-red-600 hover:to-pink-600 shadow-lg"
@@ -563,7 +606,8 @@ export function FittingPage() {
           {/* Retry Button */}
           <button
             onClick={() => {
-              setStep('mode')
+              setStep('destination')
+              setDestination('')
               setMode(null)
               setSelectedProducts([])
               setAiRecommendation(null)

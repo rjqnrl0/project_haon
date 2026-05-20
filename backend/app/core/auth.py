@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import httpx
 from fastapi import Depends, Request
@@ -13,7 +14,7 @@ from app.models.user import User
 
 logger = logging.getLogger("v-suitcase.auth")
 
-_jwks_cache: dict | None = None
+_jwks_cache: Optional[dict] = None
 
 
 async def _get_jwks() -> dict:

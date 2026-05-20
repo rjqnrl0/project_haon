@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     cognito_client_secret: str = ""
     openweathermap_api_key: str = ""
     unsplash_access_key: str = ""
+    gemini_api_key: str = ""
 
     def model_post_init(self, __context) -> None:
         if self.env in ("prod", "dev"):

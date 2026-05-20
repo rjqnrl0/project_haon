@@ -38,7 +38,7 @@ export function ShareViewPage() {
 
   return (
     <div className="space-y-6 text-center">
-      <h2 className="text-xl font-bold text-gray-900">V-Suitcase 피팅 결과</h2>
+      <h2 className="text-xl font-bold text-gray-900">H-Suitcase 피팅 결과</h2>
       {imageUrl && (
         <img src={imageUrl} alt="공유된 피팅 결과" className="max-w-sm mx-auto rounded-lg shadow-lg" />
       )}
@@ -46,7 +46,7 @@ export function ShareViewPage() {
         href="/"
         className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
       >
-        V-Suitcase에서 나도 해보기
+        H-Suitcase에서 나도 해보기
       </a>
     </div>
   )

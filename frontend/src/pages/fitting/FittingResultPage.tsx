@@ -47,7 +47,13 @@ export function FittingResultPage() {
           <h4 className="font-medium text-gray-700">착용 의류 정보</h4>
           <div className="grid gap-3">
             {clothingInfo.map((item) => (
-              <div key={item.id} className="flex gap-3 p-3 bg-white border rounded-xl">
+              <a
+                key={item.id}
+                href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent(item.brand + ' ' + item.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex gap-3 p-3 bg-white border rounded-xl hover:border-red-300 hover:shadow-md transition-all"
+              >
                 <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
                 <div className="flex-1">
                   <p className="text-xs text-gray-500">{item.brand}</p>
@@ -58,12 +64,12 @@ export function FittingResultPage() {
                     <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">15% OFF</span>
                   </div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
 
           <a
-            href="https://kor.lottedfs.com"
+            href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent(clothingInfo[0]?.brand + ' ' + clothingInfo[0]?.name)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold text-center text-lg hover:from-red-600 hover:to-pink-600 shadow-lg"

@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 
 export function AuthLayout() {
@@ -8,7 +8,7 @@ export function AuthLayout() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">V-Suitcase</h1>
+          <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">H-Suitcase</Link>
           <nav className="hidden md:flex gap-6">
             <NavLink to="/fitting" className={({ isActive }) => isActive ? 'text-blue-600 font-medium' : 'text-gray-600'}>
               피팅

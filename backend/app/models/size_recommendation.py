@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -18,6 +19,6 @@ class SizeRecommendation(TimestampMixin, Base):
     )
     clothing_category: Mapped[str] = mapped_column(String(20), nullable=False)
     recommended_size: Mapped[str] = mapped_column(String(10), nullable=False)
-    size_chart: Mapped[str | None] = mapped_column(Text, nullable=True)
-    fit_advice: Mapped[str | None] = mapped_column(Text, nullable=True)
-    styling_tip: Mapped[str | None] = mapped_column(Text, nullable=True)
+    size_chart: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fit_advice: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    styling_tip: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
