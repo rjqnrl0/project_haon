@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-05-20" version="21.0.0">
+  <diagram name="H-Suitcase Architecture" id="architecture">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="H-Suitcase (V-Suitcase) 시스템 아키텍처" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- User -->
+        <mxCell id="user" value="👤 사용자" style="shape=mxgraph.aws4.user;fillColor=#232F3E;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="60" y="120" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Browser -->
+        <mxCell id="browser" value="브라우저" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.general;fillColor=#232F3E;strokeColor=none;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="65" y="230" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: User to Browser -->
+        <mxCell id="e_user_browser" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="user" target="browser" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Route 53 -->
+        <mxCell id="route53" value="Route 53&#xa;h-suitcase.com&#xa;→ 98.86.150.20" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;fillColor=#8C4FFF;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="230" y="230" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Browser to Route53 -->
+        <mxCell id="e_browser_r53" value="https://h-suitcase.com" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="browser" target="route53" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- AWS Region Box -->
+        <mxCell id="aws_box" value="AWS (us-east-1)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#232F3E;fillColor=#f5f5f5;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=13;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="380" y="100" width="1200" height="980" as="geometry" />
+        </mxCell>
+
+        <!-- VPC Box -->
+        <mxCell id="vpc_box" value="haon-prod-vpc (10.10.0.0/16)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=#EAD7FB;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=12;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="400" y="140" width="840" height="680" as="geometry" />
+        </mxCell>
+
+        <!-- Public Subnet Box -->
+        <mxCell id="public_subnet" value="Public Subnet (10.10.1.0/24)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#147EBA;fillColor=#E6F2F8;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=11;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="420" y="190" width="600" height="480" as="geometry" />
+        </mxCell>
+
+        <!-- EC2 Box -->
+        <mxCell id="ec2_box" value="EC2 t3.medium&#xa;haon-prod-server&#xa;Amazon Linux 2023" style="shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_ec2_instance;strokeColor=#E97025;fillColor=#FFF1E5;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=11;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="440" y="240" width="560" height="400" as="geometry" />
+        </mxCell>
+
+        <!-- Nginx -->
+        <mxCell id="nginx" value="Nginx :80/:443&#xa;SSL (Let's Encrypt)&#xa;HTTP → HTTPS 리다이렉트" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#009900;strokeColor=#007700;fontColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="300" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI -->
+        <mxCell id="fastapi" value="FastAPI (uvicorn :8000)&#xa;systemd haon.service&#xa;Python 3.11" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=#004499;fontColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="300" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Frontend -->
+        <mxCell id="frontend" value="React / Vite&#xa;프론트엔드&#xa;/frontend/dist" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#61DAFB;strokeColor=#00A8CC;fontColor=#232F3E;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="460" y="430" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes -->
+        <mxCell id="api_routes" value="API Routes&#xa;/auth /face /fitting&#xa;/recommend /share" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=#004499;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="430" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- IAM Role -->
+        <mxCell id="iam_role" value="IAM Role: haon-ec2-role&#xa;S3 / Bedrock / Cognito&#xa;Secrets Manager 권한" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DD344C;strokeColor=#AA0000;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="580" y="560" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet Box -->
+        <mxCell id="private_subnet" value="Private Subnet (10.10.11.0/24)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=#dae8fc;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=11;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="430" y="700" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- RDS -->
+        <mxCell id="rds" value="RDS PostgreSQL 16&#xa;haon-prod-db&#xa;db.t3.micro" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#C7131F;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="530" y="720" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- S3 -->
+        <mxCell id="s3" value="S3&#xa;v-suitcase-temp-prod&#xa;이미지 저장 / presigned URL" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#277116;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="810" y="180" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Secrets Manager -->
+        <mxCell id="secrets" value="Secrets Manager&#xa;v-suitcase/prod&#xa;DB/Cognito/API Key" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;fillColor=#DD344C;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="960" y="180" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Cognito -->
+        <mxCell id="cognito" value="Cognito User Pool&#xa;haon-user-pool&#xa;JWT 인증 (RS256)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;fillColor=#BF0816;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="180" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Bedrock Box -->
+        <mxCell id="bedrock_box" value="Amazon Bedrock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF9900;strokeColor=#E68A00;fontColor=#232F3E;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="810" y="700" width="400" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Claude -->
+        <mxCell id="claude" value="Claude Opus 4.6&#xa;의류 설명 생성&#xa;코디 추천 생성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FF9900;fontColor=#232F3E;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="740" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Stability AI -->
+        <mxCell id="stability" value="Stability AI&#xa;가상 피팅 이미지 생성&#xa;코디 이미지 생성" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FF9900;fontColor=#232F3E;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="740" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- External Services Box -->
+        <mxCell id="ext_box" value="외부 서비스" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="300" width="280" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- OpenWeatherMap -->
+        <mxCell id="weather" value="☁️ OpenWeatherMap API&#xa;날씨 정보 조회" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="340" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Unsplash -->
+        <mxCell id="unsplash" value="📷 Unsplash API&#xa;여행지 이미지" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="420" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <!-- Route53 to Nginx -->
+        <mxCell id="e_r53_nginx" value="98.86.150.20" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="route53" target="nginx" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Nginx to Frontend -->
+        <mxCell id="e_nginx_fe" value="/ (정적파일)" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="nginx" target="frontend" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Nginx to FastAPI -->
+        <mxCell id="e_nginx_api" value="/api/ (proxy)" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="nginx" target="fastapi" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI to API Routes -->
+        <mxCell id="e_fastapi_routes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="fastapi" target="api_routes" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to RDS -->
+        <mxCell id="e_api_rds" value="DB 조회/저장" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="rds" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to S3 -->
+        <mxCell id="e_api_s3" value="이미지 업/다운" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="s3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to Secrets -->
+        <mxCell id="e_api_secrets" value="시크릿 로드" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="secrets" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to Cognito -->
+        <mxCell id="e_api_cognito" value="회원가입/로그인" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="cognito" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to Bedrock -->
+        <mxCell id="e_api_bedrock" value="AI 추론 요청" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="bedrock_box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes to Weather -->
+        <mxCell id="e_api_weather" value="날씨 조회" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="api_routes" target="weather" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend Box -->
+        <mxCell id="legend" value="범례" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="560" width="280" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1" value="■ 프론트엔드 (React)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#00A8CC;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="595" width="240" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="■ 백엔드 (FastAPI)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#004499;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="625" width="240" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="■ 데이터베이스 (RDS)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#C7131F;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="655" width="240" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="■ AI 서비스 (Bedrock)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#E68A00;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="685" width="240" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="■ 보안 (IAM / Cognito / Secrets)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#AA0000;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="715" width="240" height="25" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
