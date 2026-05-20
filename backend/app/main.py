@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 settings = get_settings()
 
-app = FastAPI(title="V-Suitcase API", version="0.1.0")
+app = FastAPI(title="V-Suitcase API", version="0.1.0", root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,

@@ -38,7 +38,7 @@
 
         <!-- AWS Region Box -->
         <mxCell id="aws_box" value="AWS (us-east-1)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#232F3E;fillColor=#f5f5f5;verticalAlign=top;align=center;spacingTop=25;fontStyle=1;fontSize=13;fontColor=#232F3E;" vertex="1" parent="1">
-          <mxGeometry x="380" y="100" width="1200" height="980" as="geometry" />
+          <mxGeometry x="380" y="100" width="1200" height="1060" as="geometry" />
         </mxCell>
 
         <!-- VPC Box -->
@@ -136,6 +136,41 @@
           <mxGeometry x="1300" y="420" width="240" height="60" as="geometry" />
         </mxCell>
 
+        <!-- CloudWatch Box -->
+        <mxCell id="cloudwatch_box" value="Amazon CloudWatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E7157B;strokeColor=#C0116A;fontColor=#ffffff;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="540" width="280" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- CloudWatch Alarm -->
+        <mxCell id="cw_alarm" value="Billing Alarm&#xa;haon-billing-50usd&#xa;$50 초과 시 발동" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#E7157B;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="580" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- SNS -->
+        <mxCell id="sns" value="SNS&#xa;haon-billing-alert&#xa;이메일 알림" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;fillColor=#E7157B;strokeColor=none;fontColor=#232F3E;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="580" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: CloudWatch Alarm to SNS -->
+        <mxCell id="e_cw_sns" value="트리거" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="cw_alarm" target="sns" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Email notification -->
+        <mxCell id="email_notify" value="mpark@hist.co.kr&#xa;이메일 수신" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#232F3E;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="710" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: SNS to Email -->
+        <mxCell id="e_sns_email" value="" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="sns" target="email_notify" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: API Routes to CloudWatch -->
+        <mxCell id="e_api_cw" value="메트릭 수집" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;" edge="1" source="api_routes" target="cloudwatch_box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
         <!-- Arrows -->
         <!-- Route53 to Nginx -->
         <mxCell id="e_r53_nginx" value="98.86.150.20" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;" edge="1" source="route53" target="nginx" parent="1">
@@ -189,23 +224,26 @@
 
         <!-- Legend Box -->
         <mxCell id="legend" value="범례" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="1280" y="560" width="280" height="200" as="geometry" />
+          <mxGeometry x="1280" y="790" width="280" height="220" as="geometry" />
         </mxCell>
 
         <mxCell id="l1" value="■ 프론트엔드 (React)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#00A8CC;" vertex="1" parent="1">
-          <mxGeometry x="1295" y="595" width="240" height="25" as="geometry" />
+          <mxGeometry x="1295" y="820" width="240" height="25" as="geometry" />
         </mxCell>
         <mxCell id="l2" value="■ 백엔드 (FastAPI)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#004499;" vertex="1" parent="1">
-          <mxGeometry x="1295" y="625" width="240" height="25" as="geometry" />
+          <mxGeometry x="1295" y="848" width="240" height="25" as="geometry" />
         </mxCell>
         <mxCell id="l3" value="■ 데이터베이스 (RDS)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#C7131F;" vertex="1" parent="1">
-          <mxGeometry x="1295" y="655" width="240" height="25" as="geometry" />
+          <mxGeometry x="1295" y="876" width="240" height="25" as="geometry" />
         </mxCell>
         <mxCell id="l4" value="■ AI 서비스 (Bedrock)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#E68A00;" vertex="1" parent="1">
-          <mxGeometry x="1295" y="685" width="240" height="25" as="geometry" />
+          <mxGeometry x="1295" y="904" width="240" height="25" as="geometry" />
         </mxCell>
         <mxCell id="l5" value="■ 보안 (IAM / Cognito / Secrets)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#AA0000;" vertex="1" parent="1">
-          <mxGeometry x="1295" y="715" width="240" height="25" as="geometry" />
+          <mxGeometry x="1295" y="932" width="240" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" value="■ 모니터링 (CloudWatch / SNS)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#E7157B;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="960" width="240" height="25" as="geometry" />
         </mxCell>
 
       </root>
