@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     unsplash_access_key: str = ""
     gemini_api_key: str = ""
 
+    # Bedrock
+    enable_bedrock: bool = False
+    bedrock_region: str = "us-east-1"
+    bedrock_inpaint_model: str = ""
+    bedrock_remove_bg_model: str = ""
+
     def model_post_init(self, __context) -> None:
         if self.env in ("prod", "dev"):
             secrets = _load_secrets("v-suitcase/prod", "us-east-1")

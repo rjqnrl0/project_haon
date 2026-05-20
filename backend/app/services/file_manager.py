@@ -66,7 +66,7 @@ class FileManagerService:
             file_path = LOCAL_STORAGE_DIR / s3_key
             if not file_path.exists():
                 raise NotFoundError("파일을 찾을 수 없습니다")
-            return f"http://localhost:8000/local-files/{s3_key}"
+            return f"/api/local-files/{s3_key}"
 
         try:
             self.s3.head_object(Bucket=self.bucket, Key=s3_key)

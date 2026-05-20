@@ -24,6 +24,11 @@ class AttractionsRequest(BaseModel):
     destination: str
 
 
+class WeatherSimpleRequest(BaseModel):
+    destination: str
+    arrival: str = ""
+
+
 @router.get("/size/{task_id}")
 async def get_size_recommendation(
     task_id: str,
@@ -48,6 +53,16 @@ async def get_dutyfree_codi(
 ):
     return await recommend_service.get_dutyfree_codi(
         user=user, destination=body.destination, arrival=body.arrival
+    )
+
+
+@router.post("/weather-simple")
+async def get_weather_simple(
+    body: WeatherSimpleRequest,
+    user: User = Depends(get_current_user),
+):
+    return await recommend_service.get_weather_brief(
+        destination=body.destination, arrival=body.arrival
     )
 
 

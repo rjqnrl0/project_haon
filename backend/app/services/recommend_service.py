@@ -298,7 +298,54 @@ class RecommendService:
             },
         }
 
+    DESTINATION_ATTRACTIONS_FALLBACK = {
+        "tokyo": [
+            {"name": "Shibuya Crossing", "name_ko": "시부야 스크램블 교차로", "description": "세계에서 가장 붐비는 교차로", "image_keyword": "shibuya crossing tokyo"},
+            {"name": "Tokyo Tower", "name_ko": "도쿄 타워", "description": "도쿄의 상징적 타워", "image_keyword": "tokyo tower"},
+            {"name": "Senso-ji Temple", "name_ko": "센소지", "description": "아사쿠사의 역사적 사찰", "image_keyword": "sensoji temple tokyo"},
+            {"name": "Meiji Shrine", "name_ko": "메이지 신궁", "description": "도심 속 평화로운 신사", "image_keyword": "meiji shrine tokyo"},
+            {"name": "Akihabara", "name_ko": "아키하바라", "description": "전자상가와 팝컬처의 거리", "image_keyword": "akihabara tokyo"},
+        ],
+        "bangkok": [
+            {"name": "Grand Palace", "name_ko": "왕궁", "description": "태국 왕실의 화려한 궁전", "image_keyword": "grand palace bangkok"},
+            {"name": "Wat Arun", "name_ko": "왓 아룬", "description": "새벽의 사원", "image_keyword": "wat arun bangkok"},
+            {"name": "Khao San Road", "name_ko": "카오산 로드", "description": "여행자의 거리", "image_keyword": "khao san road bangkok"},
+            {"name": "Chatuchak Market", "name_ko": "짜뚜짝 시장", "description": "세계 최대 주말 시장", "image_keyword": "chatuchak market bangkok"},
+            {"name": "Wat Pho", "name_ko": "왓 포", "description": "거대한 와불이 있는 사원", "image_keyword": "wat pho bangkok"},
+        ],
+        "paris": [
+            {"name": "Eiffel Tower", "name_ko": "에펠탑", "description": "파리의 상징적 랜드마크", "image_keyword": "eiffel tower paris"},
+            {"name": "Louvre Museum", "name_ko": "루브르 박물관", "description": "세계 최대 미술관", "image_keyword": "louvre museum paris"},
+            {"name": "Champs-Élysées", "name_ko": "샹젤리제 거리", "description": "파리의 대표 거리", "image_keyword": "champs elysees paris"},
+            {"name": "Montmartre", "name_ko": "몽마르뜨 언덕", "description": "예술가의 언덕", "image_keyword": "montmartre paris"},
+            {"name": "Seine River", "name_ko": "센강", "description": "파리를 가로지르는 강", "image_keyword": "seine river paris"},
+        ],
+        "london": [
+            {"name": "Big Ben", "name_ko": "빅벤", "description": "영국 국회의사당의 시계탑", "image_keyword": "big ben london"},
+            {"name": "Tower Bridge", "name_ko": "타워 브리지", "description": "런던의 상징적 다리", "image_keyword": "tower bridge london"},
+            {"name": "Buckingham Palace", "name_ko": "버킹엄 궁전", "description": "영국 왕실 궁전", "image_keyword": "buckingham palace london"},
+            {"name": "London Eye", "name_ko": "런던 아이", "description": "템즈강변 대관람차", "image_keyword": "london eye"},
+            {"name": "Hyde Park", "name_ko": "하이드 파크", "description": "런던 중심부의 대형 공원", "image_keyword": "hyde park london"},
+        ],
+        "new york": [
+            {"name": "Times Square", "name_ko": "타임스 스퀘어", "description": "뉴욕의 화려한 중심지", "image_keyword": "times square new york"},
+            {"name": "Central Park", "name_ko": "센트럴 파크", "description": "맨해튼 한가운데 거대한 공원", "image_keyword": "central park new york"},
+            {"name": "Statue of Liberty", "name_ko": "자유의 여신상", "description": "미국의 상징", "image_keyword": "statue of liberty new york"},
+            {"name": "Brooklyn Bridge", "name_ko": "브루클린 브리지", "description": "역사적인 현수교", "image_keyword": "brooklyn bridge new york"},
+            {"name": "Empire State Building", "name_ko": "엠파이어 스테이트 빌딩", "description": "뉴욕 스카이라인의 아이콘", "image_keyword": "empire state building new york"},
+        ],
+        "bali": [
+            {"name": "Tanah Lot Temple", "name_ko": "따나롯 사원", "description": "바다 위 절벽 사원", "image_keyword": "tanah lot temple bali"},
+            {"name": "Ubud Rice Terraces", "name_ko": "우붓 라이스 테라스", "description": "초록빛 계단식 논", "image_keyword": "tegallalang rice terrace bali"},
+            {"name": "Uluwatu Temple", "name_ko": "울루와뚜 사원", "description": "절벽 위 힌두 사원", "image_keyword": "uluwatu temple bali"},
+            {"name": "Kuta Beach", "name_ko": "쿠타 비치", "description": "발리 대표 해변", "image_keyword": "kuta beach bali"},
+            {"name": "Sacred Monkey Forest", "name_ko": "몽키 포레스트", "description": "원숭이와 고대 사원의 숲", "image_keyword": "monkey forest ubud bali"},
+        ],
+    }
+
     async def get_attractions(self, destination: str) -> dict:
+        from google import genai
+
         prompt = (
             f"여행지 '{destination}'의 대표 관광지 5곳을 추천해주세요.\n"
             f"가상 피팅 배경으로 사용할 곳이므로 사진 배경으로 좋은 랜드마크 위주로 추천해주세요.\n\n"
@@ -311,21 +358,13 @@ class RecommendService:
             f'}}'
         )
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
-        })
-
         try:
-            response = self.bedrock.invoke_model(
-                modelId="us.anthropic.claude-sonnet-4-6",
-                contentType="application/json",
-                accept="application/json",
-                body=body,
+            client = genai.Client(api_key=self.settings.gemini_api_key)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
             )
-            resp_body = json.loads(response["body"].read())
-            text = resp_body["content"][0]["text"].strip()
+            text = response.text.strip()
 
             if text.startswith("```"):
                 text = text.split("\n", 1)[1] if "\n" in text else text[3:]
@@ -339,15 +378,11 @@ class RecommendService:
             return json.loads(text)
         except Exception as e:
             logger.warning("Attractions generation failed, using fallback: %s", e)
-            return {
-                "attractions": [
-                    {"name": "Eiffel Tower", "name_ko": "에펠탑", "description": "파리의 상징적 랜드마크", "image_keyword": "eiffel tower paris"},
-                    {"name": "Louvre Museum", "name_ko": "루브르 박물관", "description": "세계 최대 미술관", "image_keyword": "louvre museum paris"},
-                    {"name": "Champs-Élysées", "name_ko": "샹젤리제 거리", "description": "파리의 대표 거리", "image_keyword": "champs elysees paris"},
-                    {"name": "Montmartre", "name_ko": "몽마르뜨 언덕", "description": "예술가의 언덕", "image_keyword": "montmartre paris"},
-                    {"name": "Seine River", "name_ko": "센강", "description": "파리를 가로지르는 강", "image_keyword": "seine river paris"},
-                ]
-            }
+            fallback = self.DESTINATION_ATTRACTIONS_FALLBACK.get(
+                destination,
+                self.DESTINATION_ATTRACTIONS_FALLBACK["paris"],
+            )
+            return {"attractions": fallback}
 
     async def _fetch_weather(self, city: str) -> Optional[dict]:
         api_key = self.settings.openweathermap_api_key
@@ -361,7 +396,7 @@ class RecommendService:
                     params={"q": city, "cnt": 40, "appid": api_key, "units": "metric"},
                 )
             if resp.status_code != 200:
-                raise ValidationError(f"도시를 찾을 수 없습니다: {city}")
+                return {"avg_temp": 22, "condition": "Clear", "forecasts": [], "source": "mock"}
 
             data = resp.json()
             forecasts = []
@@ -383,3 +418,53 @@ class RecommendService:
             }
         except httpx.HTTPError:
             return {"avg_temp": 22, "condition": "Clear", "forecasts": [], "source": "mock"}
+
+    DESTINATION_CITY_MAP = {
+        "tokyo": "Tokyo,JP",
+        "bangkok": "Bangkok,TH",
+        "paris": "Paris,FR",
+        "london": "London,GB",
+        "new york": "New York,US",
+        "bali": "Denpasar,ID",
+    }
+
+    async def get_weather_brief(self, destination: str, arrival: str) -> dict:
+        city = self.DESTINATION_CITY_MAP.get(destination, destination.title())
+        weather = await self._fetch_weather(city)
+        if not weather:
+            return {"temp": 22, "condition": "Clear", "description": "맑음"}
+
+        temp = weather["avg_temp"]
+        condition = weather["condition"]
+
+        if arrival and weather.get("forecasts"):
+            from datetime import datetime
+            try:
+                arrival_dt = datetime.fromisoformat(arrival.replace("Z", "+00:00"))
+                closest = min(
+                    weather["forecasts"],
+                    key=lambda f: abs(datetime.strptime(f["date"], "%Y-%m-%d %H:%M:%S") - arrival_dt.replace(tzinfo=None)),
+                )
+                temp = closest["temp"]
+                condition = closest["condition"]
+            except (ValueError, TypeError):
+                pass
+
+        condition_ko_map = {
+            "Clear": "맑음",
+            "Clouds": "흐림",
+            "Rain": "비",
+            "Drizzle": "이슬비",
+            "Thunderstorm": "뇌우",
+            "Snow": "눈",
+            "Mist": "안개",
+            "Fog": "안개",
+            "Haze": "연무",
+        }
+
+        return {
+            "temp": round(temp, 1),
+            "condition": condition,
+            "description": condition_ko_map.get(condition, condition),
+            "city": city,
+        }

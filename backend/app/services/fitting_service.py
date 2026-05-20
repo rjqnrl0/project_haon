@@ -84,7 +84,7 @@ class FittingService:
 
         response = self._gemini_generate_with_retry(
             client,
-            model="gemini-2.5-flash-image",
+            model="gemini-3.1-flash-image-preview",
             contents=[
                 prompt,
                 types.Part.from_bytes(data=person_png, mime_type="image/png"),
@@ -137,7 +137,7 @@ class FittingService:
 
         response = self._gemini_generate_with_retry(
             client,
-            model="gemini-2.5-flash-image",
+            model="gemini-3.1-flash-image-preview",
             contents=[
                 prompt,
                 types.Part.from_bytes(data=person_png, mime_type="image/png"),

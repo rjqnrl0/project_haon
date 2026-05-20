@@ -39,6 +39,7 @@ export function FittingPage() {
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [fittingResult, setFittingResult] = useState<FittingResult | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [weatherInfo, setWeatherInfo] = useState<{ temp: number; condition: string; description: string; city: string } | null>(null)
   const showToast = useUIStore((s) => s.showToast)
 
   const FITTING_STAGES = [
@@ -87,6 +88,15 @@ export function FittingPage() {
   const selectedDest = DESTINATIONS.find((d) => d.id === destination)
   const destinationLabel = selectedDest?.nameKo || destination
 
+  const fetchWeather = async (dest: string) => {
+    try {
+      const { data } = await api.post('/recommend/weather-simple', { destination: dest, arrival })
+      setWeatherInfo(data)
+    } catch {
+      // 날씨 조회 실패해도 플로우에 영향 없음
+    }
+  }
+
   const handleModeSelect = async (selectedMode: Mode) => {
     setMode(selectedMode)
     if (selectedMode === 'ai-recommend') {
@@ -133,13 +143,51 @@ export function FittingPage() {
         imageKeyword: a.image_keyword || a.imageKeyword,
       })))
     } catch {
-      setAttractions([
-        { name: 'Eiffel Tower', nameKo: '에펠탑', description: '파리의 상징', imageKeyword: 'eiffel tower' },
-        { name: 'Louvre Museum', nameKo: '루브르 박물관', description: '세계 최대 미술관', imageKeyword: 'louvre' },
-        { name: 'Champs-Élysées', nameKo: '샹젤리제', description: '파리의 대표 거리', imageKeyword: 'champs elysees' },
-        { name: 'Montmartre', nameKo: '몽마르뜨', description: '예술가의 언덕', imageKeyword: 'montmartre' },
-        { name: 'Seine River', nameKo: '센강', description: '파리를 가로지르는 강', imageKeyword: 'seine river' },
-      ])
+      const fallbackAttractions: Record<string, Attraction[]> = {
+        'tokyo': [
+          { name: 'Shibuya Crossing', nameKo: '시부야 교차로', description: '세계에서 가장 붐비는 교차로', imageKeyword: 'shibuya crossing tokyo' },
+          { name: 'Tokyo Tower', nameKo: '도쿄 타워', description: '도쿄의 상징적 타워', imageKeyword: 'tokyo tower' },
+          { name: 'Senso-ji Temple', nameKo: '센소지', description: '아사쿠사의 역사적 사찰', imageKeyword: 'sensoji temple' },
+          { name: 'Meiji Shrine', nameKo: '메이지 신궁', description: '도심 속 신사', imageKeyword: 'meiji shrine tokyo' },
+          { name: 'Akihabara', nameKo: '아키하바라', description: '팝컬처의 거리', imageKeyword: 'akihabara tokyo' },
+        ],
+        'bangkok': [
+          { name: 'Grand Palace', nameKo: '왕궁', description: '태국 왕실 궁전', imageKeyword: 'grand palace bangkok' },
+          { name: 'Wat Arun', nameKo: '왓 아룬', description: '새벽의 사원', imageKeyword: 'wat arun bangkok' },
+          { name: 'Khao San Road', nameKo: '카오산 로드', description: '여행자의 거리', imageKeyword: 'khao san road' },
+          { name: 'Chatuchak Market', nameKo: '짜뚜짝 시장', description: '세계 최대 주말 시장', imageKeyword: 'chatuchak market' },
+          { name: 'Wat Pho', nameKo: '왓 포', description: '와불이 있는 사원', imageKeyword: 'wat pho bangkok' },
+        ],
+        'paris': [
+          { name: 'Eiffel Tower', nameKo: '에펠탑', description: '파리의 상징', imageKeyword: 'eiffel tower' },
+          { name: 'Louvre Museum', nameKo: '루브르 박물관', description: '세계 최대 미술관', imageKeyword: 'louvre' },
+          { name: 'Champs-Élysées', nameKo: '샹젤리제', description: '파리의 대표 거리', imageKeyword: 'champs elysees' },
+          { name: 'Montmartre', nameKo: '몽마르뜨', description: '예술가의 언덕', imageKeyword: 'montmartre' },
+          { name: 'Seine River', nameKo: '센강', description: '파리를 가로지르는 강', imageKeyword: 'seine river' },
+        ],
+        'london': [
+          { name: 'Big Ben', nameKo: '빅벤', description: '영국 국회의사당 시계탑', imageKeyword: 'big ben london' },
+          { name: 'Tower Bridge', nameKo: '타워 브리지', description: '런던의 상징적 다리', imageKeyword: 'tower bridge london' },
+          { name: 'Buckingham Palace', nameKo: '버킹엄 궁전', description: '영국 왕실 궁전', imageKeyword: 'buckingham palace' },
+          { name: 'London Eye', nameKo: '런던 아이', description: '템즈강변 대관람차', imageKeyword: 'london eye' },
+          { name: 'Hyde Park', nameKo: '하이드 파크', description: '런던 중심부 공원', imageKeyword: 'hyde park london' },
+        ],
+        'new york': [
+          { name: 'Times Square', nameKo: '타임스 스퀘어', description: '뉴욕의 화려한 중심지', imageKeyword: 'times square new york' },
+          { name: 'Central Park', nameKo: '센트럴 파크', description: '맨해튼의 거대한 공원', imageKeyword: 'central park new york' },
+          { name: 'Statue of Liberty', nameKo: '자유의 여신상', description: '미국의 상징', imageKeyword: 'statue of liberty' },
+          { name: 'Brooklyn Bridge', nameKo: '브루클린 브리지', description: '역사적인 현수교', imageKeyword: 'brooklyn bridge new york' },
+          { name: 'Empire State Building', nameKo: '엠파이어 스테이트 빌딩', description: '뉴욕 스카이라인의 아이콘', imageKeyword: 'empire state building' },
+        ],
+        'bali': [
+          { name: 'Tanah Lot Temple', nameKo: '따나롯 사원', description: '바다 위 절벽 사원', imageKeyword: 'tanah lot bali' },
+          { name: 'Ubud Rice Terraces', nameKo: '우붓 라이스 테라스', description: '초록빛 계단식 논', imageKeyword: 'rice terrace bali' },
+          { name: 'Uluwatu Temple', nameKo: '울루와뚜 사원', description: '절벽 위 힌두 사원', imageKeyword: 'uluwatu temple bali' },
+          { name: 'Kuta Beach', nameKo: '쿠타 비치', description: '발리 대표 해변', imageKeyword: 'kuta beach bali' },
+          { name: 'Sacred Monkey Forest', nameKo: '몽키 포레스트', description: '원숭이와 고대 사원의 숲', imageKeyword: 'monkey forest ubud' },
+        ],
+      }
+      setAttractions(fallbackAttractions[destination] || fallbackAttractions['paris'])
     } finally {
       setIsLoading(false)
     }
@@ -316,6 +364,7 @@ export function FittingPage() {
                 key={dest.id}
                 onClick={() => {
                   setDestination(dest.id)
+                  fetchWeather(dest.id)
                   setStep('mode')
                 }}
                 className="relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
@@ -368,6 +417,21 @@ export function FittingPage() {
             <h3 className="text-lg font-semibold">면세점 의류 선택 <span className="text-sm font-normal text-gray-500">(최대 3개)</span></h3>
             <button onClick={() => { setStep('mode'); setSelectedProducts([]) }} className="text-sm text-gray-500 hover:text-gray-700">← 뒤로</button>
           </div>
+
+          {/* Weather Card */}
+          {weatherInfo && (
+            <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-xl p-4 flex items-center gap-3">
+              <span className="text-3xl">
+                {weatherInfo.condition === 'Clear' ? '☀️' : weatherInfo.condition === 'Clouds' ? '☁️' : weatherInfo.condition === 'Rain' || weatherInfo.condition === 'Drizzle' ? '🌧️' : weatherInfo.condition === 'Snow' ? '❄️' : weatherInfo.condition === 'Thunderstorm' ? '⛈️' : '🌤️'}
+              </span>
+              <div>
+                <p className="font-semibold text-gray-800">
+                  {destinationLabel} <span className="text-blue-600">{weatherInfo.temp}°C</span> {weatherInfo.description}
+                </p>
+                <p className="text-xs text-gray-500">도착일 날씨 기준으로 의류를 선택해보세요</p>
+              </div>
+            </div>
+          )}
 
           {/* Category Filter */}
           <div className="flex gap-2 flex-wrap">
@@ -440,6 +504,21 @@ export function FittingPage() {
             <h3 className="text-lg font-semibold">AI 추천 코디</h3>
             <button onClick={() => { setStep('mode'); setSelectedProducts([]); setAiRecommendation(null) }} className="text-sm text-gray-500 hover:text-gray-700">← 뒤로</button>
           </div>
+
+          {/* Weather Card */}
+          {weatherInfo && (
+            <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-xl p-4 flex items-center gap-3">
+              <span className="text-3xl">
+                {weatherInfo.condition === 'Clear' ? '☀️' : weatherInfo.condition === 'Clouds' ? '☁️' : weatherInfo.condition === 'Rain' || weatherInfo.condition === 'Drizzle' ? '🌧️' : weatherInfo.condition === 'Snow' ? '❄️' : weatherInfo.condition === 'Thunderstorm' ? '⛈️' : '🌤️'}
+              </span>
+              <div>
+                <p className="font-semibold text-gray-800">
+                  {destinationLabel} <span className="text-blue-600">{weatherInfo.temp}°C</span> {weatherInfo.description}
+                </p>
+                <p className="text-xs text-gray-500">도착일 날씨 기준으로 의류를 선택해보세요</p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
             <p className="text-sm text-purple-800">{aiRecommendation.advice}</p>
