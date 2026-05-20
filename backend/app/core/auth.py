@@ -38,20 +38,17 @@ async def get_current_user(
 ) -> User:
     settings = get_settings()
 
-    # Local dev: bypass auth entirely, return or create a dummy user
-    if settings.env == "local":
-        result = await db.execute(select(User).where(User.email == "local@dev.test"))
+    # Local dev or no token: bypass auth, return or create a guest user
+    auth_header = request.headers.get("Authorization")
+    if settings.env == "local" or not auth_header or not auth_header.startswith("Bearer "):
+        result = await db.execute(select(User).where(User.email == "guest@h-suitcase.com"))
         user = result.scalar_one_or_none()
         if not user:
-            user = User(email="local@dev.test", cognito_sub="local-dev-user", face_registered=True)
+            user = User(email="guest@h-suitcase.com", cognito_sub="guest-user", face_registered=True)
             db.add(user)
             await db.commit()
             await db.refresh(user)
         return user
-
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise AuthError()
 
     token = auth_header.split(" ", 1)[1]
 

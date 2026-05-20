@@ -56,6 +56,7 @@ class Settings(BaseSettings):
             self.cognito_client_secret = secrets.get("cognito_client_secret", self.cognito_client_secret)
             self.openweathermap_api_key = secrets.get("openweathermap_api_key", self.openweathermap_api_key)
             self.unsplash_access_key = secrets.get("unsplash_access_key", self.unsplash_access_key)
+            self.gemini_api_key = secrets.get("gemini_api_key", self.gemini_api_key)
 
     @property
     def database_url(self) -> str:
