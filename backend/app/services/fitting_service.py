@@ -40,14 +40,10 @@ class FittingService:
 
     def _gemini_generate_with_retry(self, client, **kwargs):
         import time
-        from google.genai import types as _types
         max_retries = 3
-        http_options = _types.HttpOptions(timeout=150000)
         for attempt in range(max_retries):
             try:
-                return client.models.generate_content(
-                    http_options=http_options, **kwargs
-                )
+                return client.models.generate_content(**kwargs)
             except Exception as e:
                 if attempt < max_retries - 1 and ("500" in str(e) or "503" in str(e) or "UNAVAILABLE" in str(e)):
                     logger.warning("Gemini attempt %d failed, retrying: %s", attempt + 1, e)
