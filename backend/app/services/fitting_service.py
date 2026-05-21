@@ -101,7 +101,7 @@ class FittingService:
 
     def _run_gemini_tryon_with_background(
         self, person_bytes: bytes, garment_bytes: bytes, category: str,
-        attraction: str, destination: str
+        attraction: str, destination: str, weather_condition: str = "Clear"
     ) -> bytes:
         from google.genai import types
 
@@ -127,11 +127,24 @@ class FittingService:
             "accessory": "액세서리",
         }.get(category, "의류")
 
+        weather_scene = {
+            "Rain": "비가 오는 날씨, 젖은 바닥, 흐린 하늘",
+            "Drizzle": "이슬비가 내리는 날씨, 흐린 하늘",
+            "Thunderstorm": "뇌우가 치는 날씨, 어두운 하늘",
+            "Snow": "눈이 내리는 겨울 날씨, 눈 쌓인 배경",
+            "Clouds": "흐린 날씨, 구름 많은 하늘",
+            "Mist": "안개 낀 아침 분위기",
+            "Fog": "안개 짙은 날씨",
+            "Clear": "맑고 화창한 날씨, 파란 하늘",
+            "Haze": "연무가 있는 날씨, 따뜻한 분위기",
+        }.get(weather_condition, "자연스러운 날씨")
+
         prompt = (
             f"이 사람 사진에 두 번째 이미지의 {garment_desc}를 자연스럽게 입혀주세요. "
             f"사람의 체형, 포즈, 얼굴을 그대로 유지하면서 의류만 교체해주세요. "
             f"의류의 색상, 패턴, 디자인을 정확하게 반영하고, 조명과 그림자를 자연스럽게 처리해주세요. "
             f"배경은 {destination}의 {attraction} 관광지로 합성해주세요. "
+            f"날씨는 {weather_scene}으로 표현해주세요. "
             f"사람이 실제로 그 장소에 서 있는 것처럼 자연스럽게 만들어주세요."
         )
 
@@ -315,9 +328,10 @@ class FittingService:
 
     async def execute_fitting_with_background(
         self, user: User, body_image_id: str, clothing_ids: list,
-        product_ids: list, attraction: str, destination: str, db: AsyncSession
+        product_ids: list, attraction: str, destination: str, db: AsyncSession,
     ) -> dict:
         from app.data.dutyfree_products import get_products_by_ids
+        from app.services.recommend_service import RecommendService
 
         result = await db.execute(
             select(FittingTask).where(
@@ -331,6 +345,22 @@ class FittingService:
 
         task.status = "processing"
         await db.flush()
+
+        # destination으로 실시간 날씨 조회
+        weather_condition = "Clear"
+        try:
+            recommend_svc = RecommendService()
+            dest_city_map = {
+                "tokyo": "Tokyo,JP", "bangkok": "Bangkok,TH", "paris": "Paris,FR",
+                "london": "London,GB", "new york": "New York,US", "bali": "Denpasar,ID",
+            }
+            city = dest_city_map.get(destination.lower(), destination)
+            weather_data = await recommend_svc._fetch_weather(city)
+            if weather_data:
+                weather_condition = weather_data.get("condition", "Clear")
+            logger.info("Fitting weather for %s: %s", destination, weather_condition)
+        except Exception as e:
+            logger.warning("Weather fetch failed for fitting, using Clear: %s", e)
 
         body_bytes = self.file_manager.get_file_bytes(task.body_file_path)
         current_image_bytes = body_bytes
@@ -365,7 +395,7 @@ class FittingService:
                 if is_last and attraction and destination:
                     current_image_bytes = self._run_gemini_tryon_with_background(
                         current_image_bytes, clothing_bytes, category,
-                        attraction, destination
+                        attraction, destination, weather_condition
                     )
                 else:
                     current_image_bytes = self._run_gemini_tryon(
