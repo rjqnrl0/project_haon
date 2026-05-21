@@ -64,6 +64,8 @@ class RecommendService:
         self.file_manager = FileManagerService()
 
     def _generate_codi_with_claude(self, city: str, weather_data: dict) -> dict:
+        from google import genai as _genai
+
         avg_temp = weather_data.get("avg_temp", 20)
         condition = weather_data.get("condition", "Clear")
         forecasts = weather_data.get("forecasts", [])
@@ -86,21 +88,12 @@ class RecommendService:
             f'}}'
         )
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
-        })
-
-        response = self.bedrock.invoke_model(
-            modelId="us.anthropic.claude-sonnet-4-6",
-            contentType="application/json",
-            accept="application/json",
-            body=body,
+        client = _genai.Client(api_key=self.settings.gemini_api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
         )
-
-        resp_body = json.loads(response["body"].read())
-        text = resp_body["content"][0]["text"].strip()
+        text = response.text.strip()
 
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
@@ -114,23 +107,18 @@ class RecommendService:
         return json.loads(text)
 
     def _translate_codi_to_english(self, city: str, codi_advice: str) -> str:
+        from google import genai as _genai
+
         prompt = (
             f"Translate the following Korean fashion recommendation into a concise English image prompt "
             f"(1-2 sentences max, describe ONLY the clothing items and style):\n\n{codi_advice}"
         )
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 200,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
-        })
-        response = self.bedrock.invoke_model(
-            modelId="us.anthropic.claude-sonnet-4-6",
-            contentType="application/json",
-            accept="application/json",
-            body=body,
+        client = _genai.Client(api_key=self.settings.gemini_api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
         )
-        resp_body = json.loads(response["body"].read())
-        return resp_body["content"][0]["text"].strip()
+        return response.text.strip()
 
     def _generate_codi_image(self, city: str, codi_advice: str, user_id: str, condition: str = "Clear") -> Optional[str]:
         from google import genai
@@ -159,13 +147,28 @@ class RecommendService:
         )
 
         client = genai.Client(api_key=self.settings.gemini_api_key)
-        response = client.models.generate_content(
-            model="gemini-3.1-flash-image-preview",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"],
-            ),
-        )
+
+        import time
+        response = None
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-3.1-flash-image-preview",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE", "TEXT"],
+                    ),
+                )
+                break
+            except Exception as e:
+                if attempt < 2 and ("503" in str(e) or "UNAVAILABLE" in str(e) or "500" in str(e)):
+                    logger.warning("Gemini image gen attempt %d failed, retrying: %s", attempt + 1, e)
+                    time.sleep(3 * (attempt + 1))
+                else:
+                    raise
+
+        if response is None:
+            return None
 
         image_bytes = None
         for part in response.candidates[0].content.parts:
@@ -266,21 +269,14 @@ class RecommendService:
             f'}}'
         )
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
-        })
-
         try:
-            response = self.bedrock.invoke_model(
-                modelId="us.anthropic.claude-sonnet-4-6",
-                contentType="application/json",
-                accept="application/json",
-                body=body,
+            from google import genai as _genai
+            client = _genai.Client(api_key=self.settings.gemini_api_key)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
             )
-            resp_body = json.loads(response["body"].read())
-            text = resp_body["content"][0]["text"].strip()
+            text = response.text.strip()
 
             if text.startswith("```"):
                 text = text.split("\n", 1)[1] if "\n" in text else text[3:]

@@ -190,8 +190,8 @@ export function FittingPage() {
       setAttractions(fallbackAttractions[destination] || fallbackAttractions['paris'])
     } finally {
       setIsLoading(false)
+      setStep('attraction')
     }
-    setStep('attraction')
   }
 
   const handleAttractionNext = () => {
