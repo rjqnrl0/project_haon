@@ -63,9 +63,24 @@ class RecommendService:
         self.bedrock = session.client("bedrock-runtime", region_name="us-east-1")
         self.file_manager = FileManagerService()
 
-    def _generate_codi_with_claude(self, city: str, weather_data: dict) -> dict:
+    def _gemini_text(self, prompt: str) -> str:
         from google import genai as _genai
+        from google.genai import types as _types
 
+        client = _genai.Client(api_key=self.settings.gemini_api_key)
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-image-preview",
+            contents=prompt,
+            config=_types.GenerateContentConfig(
+                response_modalities=["TEXT"],
+            ),
+        )
+        for part in response.candidates[0].content.parts:
+            if hasattr(part, "text") and part.text:
+                return part.text.strip()
+        return ""
+
+    def _generate_codi_with_claude(self, city: str, weather_data: dict) -> dict:
         avg_temp = weather_data.get("avg_temp", 20)
         condition = weather_data.get("condition", "Clear")
         forecasts = weather_data.get("forecasts", [])
@@ -88,12 +103,7 @@ class RecommendService:
             f'}}'
         )
 
-        client = _genai.Client(api_key=self.settings.gemini_api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        text = response.text.strip()
+        text = self._gemini_text(prompt)
 
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
@@ -107,18 +117,11 @@ class RecommendService:
         return json.loads(text)
 
     def _translate_codi_to_english(self, city: str, codi_advice: str) -> str:
-        from google import genai as _genai
-
         prompt = (
             f"Translate the following Korean fashion recommendation into a concise English image prompt "
             f"(1-2 sentences max, describe ONLY the clothing items and style):\n\n{codi_advice}"
         )
-        client = _genai.Client(api_key=self.settings.gemini_api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        return response.text.strip()
+        return self._gemini_text(prompt)
 
     def _generate_codi_image(self, city: str, codi_advice: str, user_id: str, condition: str = "Clear") -> Optional[str]:
         from google import genai
@@ -270,13 +273,7 @@ class RecommendService:
         )
 
         try:
-            from google import genai as _genai
-            client = _genai.Client(api_key=self.settings.gemini_api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-            )
-            text = response.text.strip()
+            text = self._gemini_text(prompt)
 
             if text.startswith("```"):
                 text = text.split("\n", 1)[1] if "\n" in text else text[3:]
@@ -350,8 +347,6 @@ class RecommendService:
     }
 
     async def get_attractions(self, destination: str) -> dict:
-        from google import genai
-
         prompt = (
             f"여행지 '{destination}'의 대표 관광지 5곳을 추천해주세요.\n"
             f"가상 피팅 배경으로 사용할 곳이므로 사진 배경으로 좋은 랜드마크 위주로 추천해주세요.\n\n"
@@ -365,12 +360,7 @@ class RecommendService:
         )
 
         try:
-            client = genai.Client(api_key=self.settings.gemini_api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-            )
-            text = response.text.strip()
+            text = self._gemini_text(prompt)
 
             if text.startswith("```"):
                 text = text.split("\n", 1)[1] if "\n" in text else text[3:]
