@@ -78,6 +78,7 @@
           class="cta-btn mt-7 inline-flex items-center gap-2 rounded-full bg-[#06145f] px-7 py-4 text-base font-bold text-white shadow-lg">
           H-Suitcase 시작하기 →
         </button>
+        <p class="text-sm text-gray-600 mt-1" id="destination-info-top">여행지를 선택해주세요</p>
       </div>
 
       <div class="absolute right-12 top-1/2 hidden -translate-y-1/2 lg:flex gap-5">
@@ -219,18 +220,52 @@
             class="cta-btn mt-7 w-full rounded-full bg-[#06145f] px-5 py-4 font-extrabold text-white shadow-md">
             AI 가상 피팅 시작
           </button>
+          <p class="text-sm text-gray-600 mt-1" id="destination-info-bottom">여행지를 선택해주세요</p>
         </div>
       </div>
     </section>
   </main>
 
   <script>
-    function goToHSuitcase() {
-      //alert('H-Suitcase 페이지로 이동합니다. 전달 데이터: - 도착지: 파리 - 도착일시: 2026.11.24 18:35');
+    const DESTINATION_MAP = {
+      paris: '프랑스 파리',
+      tokyo: '일본 도쿄',
+      newyork: '미국 뉴욕',
+      london: '영국 런던',
+      rome: '이탈리아 로마',
+      bangkok: '태국 방콕',
+      sydney: '호주 시드니'
+    };
 
-      // 실제 구현 예시
-      window.location.href = 'https://h-suitcase.com/fitting?destination=paris&arrival=2026-11-24T18:35';
+    function getDestinationUrl() {
+      const destination = 'paris';
+      const arrival = '2026-11-24T18:35';
+      return `https://h-suitcase.com/fitting?destination=${destination}&arrival=${arrival}`;
     }
+
+    function displayDestinationInfo() {
+      const url = new URL(getDestinationUrl());
+      const destination = url.searchParams.get('destination');
+      const arrival = url.searchParams.get('arrival');
+
+      if (destination) {
+        const label = DESTINATION_MAP[destination] || destination;
+        let text = `여행지: ${label}`;
+        if (arrival) {
+          const date = new Date(arrival);
+          const formatted = date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          text += ` | 도착: ${formatted}`;
+        }
+        document.getElementById('destination-info-top').innerHTML = text;
+        document.getElementById('destination-info-bottom').innerHTML = text;
+      }
+    }
+
+    function goToHSuitcase() {
+      window.location.href = getDestinationUrl();
+    }
+
+    displayDestinationInfo();
   </script>
 </body>
 </html>

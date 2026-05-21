@@ -21,9 +21,10 @@ interface FittingResult {
 export function FittingPage() {
   const [searchParams] = useSearchParams()
   const arrival = searchParams.get('arrival') || ''
+  const initialDestination = searchParams.get('destination') || ''
 
   const [step, setStep] = useState<Step>('destination')
-  const [destination, setDestination] = useState('')
+  const [destination, setDestination] = useState(initialDestination)
   const [mode, setMode] = useState<Mode | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<DutyFreeProduct[]>([])
   const [aiRecommendation, setAiRecommendation] = useState<{ items: DutyFreeProduct[]; advice: string } | null>(null)
