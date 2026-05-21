@@ -197,8 +197,6 @@ class FittingService:
         self.file_manager.validate_file(content_type, len(image_bytes))
 
         img = Image.open(io.BytesIO(image_bytes))
-        if img.width < 640 or img.height < 480:
-            raise ValidationError("이미지 해상도가 최소 640x480 이상이어야 합니다")
 
         task_id = str(uuid.uuid4())
         s3_key = self.file_manager.upload_file(
