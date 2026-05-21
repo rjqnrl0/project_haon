@@ -40,15 +40,85 @@ class FittingService:
 
     def _gemini_generate_with_retry(self, client, **kwargs):
         import time
+        from google.genai import types as _types
         max_retries = 3
+        http_options = _types.HttpOptions(timeout=150000)
         for attempt in range(max_retries):
             try:
-                return client.models.generate_content(**kwargs)
+                return client.models.generate_content(
+                    http_options=http_options, **kwargs
+                )
             except Exception as e:
-                if attempt < max_retries - 1 and ("500" in str(e) or "503" in str(e)):
-                    time.sleep(2 ** attempt)
+                if attempt < max_retries - 1 and ("500" in str(e) or "503" in str(e) or "UNAVAILABLE" in str(e)):
+                    logger.warning("Gemini attempt %d failed, retrying: %s", attempt + 1, e)
+                    time.sleep(3 * (attempt + 1))
                     continue
                 raise
+
+    def _run_gemini_tryon_all(
+        self, person_bytes: bytes, garment_items: list,
+        attraction: str, destination: str, weather_condition: str = "Clear"
+    ) -> bytes:
+        """모든 의류를 한 번의 Gemini 호출로 피팅 + 배경 합성."""
+        from google.genai import types
+
+        client = self._get_gemini_client()
+
+        person_img = Image.open(io.BytesIO(person_bytes)).convert("RGB")
+        person_img.thumbnail((1024, 1024), Image.LANCZOS)
+        buf = io.BytesIO()
+        person_img.save(buf, format="PNG")
+        person_png = buf.getvalue()
+
+        garment_desc_map = {
+            "top": "상의(top)", "bottom": "하의(bottom/pants)",
+            "dress": "원피스(dress)", "outer": "아우터(outer/jacket)", "accessory": "액세서리",
+        }
+        weather_scene = {
+            "Rain": "비가 오는 날씨, 젖은 바닥, 흐린 하늘",
+            "Drizzle": "이슬비가 내리는 날씨, 흐린 하늘",
+            "Thunderstorm": "뇌우가 치는 날씨, 어두운 하늘",
+            "Snow": "눈이 내리는 겨울 날씨, 눈 쌓인 배경",
+            "Clouds": "흐린 날씨, 구름 많은 하늘",
+            "Mist": "안개 낀 아침 분위기",
+            "Fog": "안개 짙은 날씨",
+            "Clear": "맑고 화창한 날씨, 파란 하늘",
+            "Haze": "연무가 있는 날씨, 따뜻한 분위기",
+        }.get(weather_condition, "자연스러운 날씨")
+
+        garment_list = ", ".join(
+            garment_desc_map.get(cat, "의류") for _, cat in garment_items
+        )
+
+        prompt = (
+            f"이 사람 사진에 다음 이미지들의 의류를 자연스럽게 입혀주세요: {garment_list}. "
+            f"사람의 체형, 포즈, 얼굴을 그대로 유지하면서 의류만 교체해주세요. "
+            f"의류의 색상, 패턴, 디자인을 정확하게 반영하고, 조명과 그림자를 자연스럽게 처리해주세요. "
+            f"배경은 {destination}의 {attraction} 관광지로 합성해주세요. "
+            f"날씨는 {weather_scene}으로 표현해주세요. "
+            f"사람이 실제로 그 장소에 서 있는 것처럼 자연스럽게 만들어주세요."
+        )
+
+        contents = [prompt, types.Part.from_bytes(data=person_png, mime_type="image/png")]
+        for garment_bytes, _ in garment_items:
+            garment_img = Image.open(io.BytesIO(garment_bytes)).convert("RGB")
+            garment_img.thumbnail((1024, 1024), Image.LANCZOS)
+            buf = io.BytesIO()
+            garment_img.save(buf, format="PNG")
+            contents.append(types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png"))
+
+        response = self._gemini_generate_with_retry(
+            client,
+            model="gemini-3.1-flash-image-preview",
+            contents=contents,
+            config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+        )
+
+        for part in response.candidates[0].content.parts:
+            if part.inline_data and part.inline_data.data:
+                return part.inline_data.data
+
+        raise ValidationError("Gemini 응답에 이미지가 없습니다")
 
     def _run_gemini_tryon(self, person_bytes: bytes, garment_bytes: bytes, category: str) -> bytes:
         from google.genai import types
@@ -383,25 +453,18 @@ class FittingService:
             )
         )
 
-        for idx, clothing_task in enumerate(fitting_items):
-            category = clothing_task.task_type or "top"
-            clothing_bytes = self.file_manager.get_file_bytes(clothing_task.body_file_path)
-
-            is_last = idx == len(fitting_items) - 1
-
-            try:
-                if is_last and attraction and destination:
-                    current_image_bytes = self._run_gemini_tryon_with_background(
-                        current_image_bytes, clothing_bytes, category,
-                        attraction, destination, weather_condition
-                    )
-                else:
-                    current_image_bytes = self._run_gemini_tryon(
-                        current_image_bytes, clothing_bytes, category
-                    )
-            except Exception as e:
-                logger.error("Gemini VTON failed for %s: %s", category, e)
-                raise ValidationError(f"AI 피팅 처리 실패: {str(e)}")
+        # 모든 의류를 1회 Gemini 호출로 처리 (N회 순차 호출 → timeout 방지)
+        garment_items = [
+            (self.file_manager.get_file_bytes(t.body_file_path), t.task_type or "top")
+            for t in fitting_items
+        ]
+        try:
+            current_image_bytes = self._run_gemini_tryon_all(
+                body_bytes, garment_items, attraction, destination, weather_condition
+            )
+        except Exception as e:
+            logger.error("Gemini VTON failed: %s", e)
+            raise ValidationError(f"AI 피팅 처리 실패: {str(e)}")
 
         result_s3_key = self.file_manager.upload_file(
             user_id=str(user.id),
