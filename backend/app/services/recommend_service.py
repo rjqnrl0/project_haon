@@ -132,17 +132,30 @@ class RecommendService:
         resp_body = json.loads(response["body"].read())
         return resp_body["content"][0]["text"].strip()
 
-    def _generate_codi_image(self, city: str, codi_advice: str, user_id: str) -> Optional[str]:
+    def _generate_codi_image(self, city: str, codi_advice: str, user_id: str, condition: str = "Clear") -> Optional[str]:
         from google import genai
         from google.genai import types
         import io
 
         outfit_en = self._translate_codi_to_english(city, codi_advice)
 
+        weather_scene = {
+            "Rain": "rainy day, wet streets, people with umbrellas, overcast sky",
+            "Drizzle": "light rain, misty atmosphere, overcast sky",
+            "Thunderstorm": "stormy weather, dark clouds, dramatic sky",
+            "Snow": "snowy day, snow on the ground, winter atmosphere",
+            "Clouds": "cloudy day, overcast sky, soft diffused light",
+            "Mist": "misty morning, foggy atmosphere",
+            "Fog": "foggy atmosphere, low visibility",
+            "Clear": "sunny day, clear blue sky, bright natural lighting",
+            "Haze": "hazy atmosphere, warm diffused light",
+        }.get(condition, "natural lighting")
+
         prompt = (
             f"A stylish person wearing {outfit_en}, "
             f"standing in front of a famous landmark in {city}, "
-            f"full body fashion photo, natural lighting, travel photography, high quality"
+            f"{weather_scene}, "
+            f"full body fashion photo, travel photography, high quality"
         )
 
         client = genai.Client(api_key=self.settings.gemini_api_key)
@@ -211,8 +224,9 @@ class RecommendService:
 
         image_url = None
         try:
+            condition = weather_data.get("condition", "Clear") if weather_data else "Clear"
             image_url = self._generate_codi_image(
-                city, recommendation["codi_advice"], str(user.id)
+                city, recommendation["codi_advice"], str(user.id), condition=condition
             )
         except Exception as e:
             logger.warning("Codi image generation failed: %s", e)
