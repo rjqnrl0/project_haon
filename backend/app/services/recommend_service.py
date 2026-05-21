@@ -133,15 +133,11 @@ class RecommendService:
         return resp_body["content"][0]["text"].strip()
 
     def _generate_codi_image(self, city: str, codi_advice: str, user_id: str) -> Optional[str]:
-        from PIL import Image
+        from google import genai
+        from google.genai import types
         import io
 
         outfit_en = self._translate_codi_to_english(city, codi_advice)
-
-        img = Image.new("RGB", (512, 768), (200, 200, 200))
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        image_b64 = base64.b64encode(buf.getvalue()).decode()
 
         prompt = (
             f"A stylish person wearing {outfit_en}, "
@@ -149,24 +145,24 @@ class RecommendService:
             f"full body fashion photo, natural lighting, travel photography, high quality"
         )
 
-        body = json.dumps({
-            "image": image_b64,
-            "search_prompt": "the gray background",
-            "prompt": prompt,
-        })
-
-        response = self.bedrock.invoke_model(
-            modelId="us.stability.stable-image-search-replace-v1:0",
-            contentType="application/json",
-            accept="application/json",
-            body=body,
+        client = genai.Client(api_key=self.settings.gemini_api_key)
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-image-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+            ),
         )
 
-        resp_body = json.loads(response["body"].read())
-        if "images" not in resp_body or not resp_body["images"]:
-            logger.warning("Stability response missing images: %s", list(resp_body.keys()))
+        image_bytes = None
+        for part in response.candidates[0].content.parts:
+            if part.inline_data and part.inline_data.mime_type.startswith("image/"):
+                image_bytes = part.inline_data.data
+                break
+
+        if not image_bytes:
+            logger.warning("Gemini codi image response missing image data")
             return None
-        image_bytes = base64.b64decode(resp_body["images"][0])
 
         s3_key = self.file_manager.upload_file(
             user_id=user_id,
