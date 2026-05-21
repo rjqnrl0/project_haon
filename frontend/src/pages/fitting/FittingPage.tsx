@@ -652,7 +652,7 @@ export function FittingPage() {
               {(fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts).map((item) => (
                 <a
                   key={item.id}
-                  href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent(item.brand + ' ' + item.name)}`}
+                  href={`https://${window.innerWidth <= 768 ? 'm.' : ''}kor.lottedfs.com/kr/search?comSearchWord=${(item.brand + ' ' + item.name).replace(/\s+/g, '+')}&comCollection=&comTcatCD=&comMcatCD=&comScatCD=&comPriceMin=&comPriceMax=&comErpPrdGenVal_YN=&comHsaleIcon_YN=&comSaleIcon_YN=&comCpnIcon_YN=&comSvmnIcon_YN=&comGiftIcon_YN=&comMblSpprcIcon_YN=&comSpell_YN=&listCount=&returnUrl=&prd_moreListYn=&prd_curPageNo=&brandSearchWord=&korBrandList=&engBrandList=`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex gap-3 p-3 bg-white border rounded-xl hover:border-red-300 hover:shadow-md transition-all"
@@ -674,7 +674,7 @@ export function FittingPage() {
 
           {/* CTA Button */}
           <a
-            href={`https://kor.lottedfs.com/kr/search?searchWord=${encodeURIComponent((fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.brand + ' ' + (fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.name)}`}
+            href={`https://${window.innerWidth <= 768 ? 'm.' : ''}kor.lottedfs.com/kr/search?comSearchWord=${((fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.brand + ' ' + (fittingResult.clothing_info.length > 0 ? fittingResult.clothing_info : selectedProducts)[0]?.name).replace(/\s+/g, '+')}&comCollection=&comTcatCD=&comMcatCD=&comScatCD=&comPriceMin=&comPriceMax=&comErpPrdGenVal_YN=&comHsaleIcon_YN=&comSaleIcon_YN=&comCpnIcon_YN=&comSvmnIcon_YN=&comGiftIcon_YN=&comMblSpprcIcon_YN=&comSpell_YN=&listCount=&returnUrl=&prd_moreListYn=&prd_curPageNo=&brandSearchWord=&korBrandList=&engBrandList=`}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold text-center text-lg hover:from-red-600 hover:to-pink-600 shadow-lg"
