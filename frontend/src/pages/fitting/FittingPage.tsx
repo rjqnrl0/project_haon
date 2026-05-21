@@ -23,7 +23,8 @@ export function FittingPage() {
   const arrival = searchParams.get('arrival') || ''
   const initialDestination = searchParams.get('destination') || ''
 
-  const [step, setStep] = useState<Step>('destination')
+  const hasValidInitialDestination = DESTINATIONS.some((d) => d.id === initialDestination)
+  const [step, setStep] = useState<Step>(hasValidInitialDestination ? 'mode' : 'destination')
   const [destination, setDestination] = useState(initialDestination)
   const [mode, setMode] = useState<Mode | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<DutyFreeProduct[]>([])
@@ -79,6 +80,12 @@ export function FittingPage() {
     setFittingStage('완료!')
     setTimeout(() => setIsFittingInProgress(false), 500)
   }
+
+  useEffect(() => {
+    if (hasValidInitialDestination) {
+      fetchWeather(initialDestination)
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
